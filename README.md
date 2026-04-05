@@ -46,6 +46,20 @@ rm -rf .claude/skills/defprod-onboard-repo
 
 There's no uninstall command — skills are just directories with markdown files.
 
+## Getting started
+
+After installing, follow these steps to go from zero to a fully onboarded repository:
+
+1. **Scan your repo** — run `/defprod-onboard-repo` in the repository root. It discovers your apps and libraries, proposes which should become DefProd products, and writes an onboarding document.
+
+2. **Define each product** — run `/defprod-onboard-product <product-name>` for each product. It builds the brief, areas, and user stories by analysing your codebase. This is where the definition takes shape.
+
+3. **Start building with definition sync** — your products are now defined. Use these skills in your daily workflow:
+   - `/defprod-implement-feature` — aligns every code change to a user story before you write it
+   - `/defprod-fix-bug` — traces bugs back to acceptance criteria and verifies the fix against them
+   - `/defprod-create-area-tests` — generates e2e tests directly from your user stories
+   - `/defprod-analyze-discrepancies` — catches drift between your definition and your code
+
 ## Official Skills
 
 Authored and maintained by the DefProd team.
@@ -57,25 +71,12 @@ Authored and maintained by the DefProd team.
 | `defprod-create-definition` | Populate brief + areas from codebase analysis | Onboarding |
 | `defprod-create-area-stories` | Create user stories with acceptance criteria from codebase | Definition |
 | `defprod-implement-feature` | User story alignment, implementation, verification workflow | Development |
+| `defprod-fix-bug` | Trace bug to user story, fix, verify against acceptance criteria | Development |
 | `defprod-create-area-tests` | Generate e2e tests from user stories and acceptance criteria | Testing |
 | `defprod-run-area-tests` | Run area tests, classify failures as test vs production fault | Testing |
 | `defprod-fix-test-failures` | Read test report, implement fixes | Testing |
 | `defprod-analyze-discrepancies` | Find drift between product definition and code | Maintenance |
 | `defprod-fix-discrepancies` | Act on discrepancy report — update definition + code | Maintenance |
-
-### Getting started
-
-The fastest way to see DefProd in action on your codebase:
-
-```
-/defprod-onboard-repo
-```
-
-This scans your repository, proposes which apps should become DefProd product definitions, and writes an onboarding document. Then for each product:
-
-```
-/defprod-onboard-product <product-name>
-```
 
 ## Community Skills
 

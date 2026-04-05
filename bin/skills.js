@@ -197,17 +197,12 @@ function install(targetDir, contribNames, args) {
     }
   }
 
-  console.log(`\nInstalled ${installed} skill${installed !== 1 ? 's' : ''}${skipped ? `, skipped ${skipped}` : ''}.`);
-
-  // Offer to scaffold .defprod/defprod.json
-  const configPath = path.join(targetDir, CONFIG_FILE);
-  if (!fs.existsSync(configPath)) {
-    console.log(`\nTip: Create ${CONFIG_FILE} to configure project-specific paths.`);
-    console.log('Skills work without it (they discover paths automatically), but config gives faster, more deterministic results.');
-    console.log('See README for the full config reference.');
-  }
-
-  console.log('\nDone. Skills are ready to use.');
+  console.log(`\nDone. ${installed} skill${installed !== 1 ? 's' : ''} installed${skipped ? `, ${skipped} skipped` : ''}.`);
+  console.log('\nGet started:');
+  console.log('  1. Run /defprod-onboard-repo to scan your codebase and propose products');
+  console.log('  2. Run /defprod-onboard-product <name> for each product to build the full definition');
+  console.log('  3. Use /defprod-implement-feature and /defprod-fix-bug for story-aligned development');
+  console.log('\nFull guide: https://github.com/defprod1/defprod-skills#getting-started');
 }
 
 function updateSkillSet(label, srcDir, skillsDir, skills, stats) {
