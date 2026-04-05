@@ -1,0 +1,36 @@
+{
+  "name": "@defprod/skills",
+  "version": "0.0.0",
+  "description": "Agent skills for DefProd — user story alignment, codebase analysis, test generation, drift detection",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/defprod1/defprod-skills.git"
+  },
+  "homepage": "https://github.com/defprod1/defprod-skills",
+  "bugs": {
+    "url": "https://github.com/defprod1/defprod-skills/issues"
+  },
+  "keywords": [
+    "claude-code",
+    "skills",
+    "defprod",
+    "product-definition",
+    "ai-workflows",
+    "user-stories",
+    "e2e-testing"
+  ],
+  "bin": {
+    "defprod-skills": "bin/skills.js"
+  },
+  "files": [
+    "bin/",
+    "skills/",
+    "contrib/",
+    "LICENSE",
+    "README.md"
+  ],
+  "engines": {
+    "node": ">=18"
+  }
+}
