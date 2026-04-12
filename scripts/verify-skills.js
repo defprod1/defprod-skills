@@ -122,13 +122,13 @@ if (contribDirs.length === 0) {
 console.log('\n3. MCP tool cross-reference');
 
 const KNOWN_MCP_TOOLS = [
-  'createArchitectureElement', 'createArea', 'createProduct', 'createUserStory',
-  'deleteArchitectureElement', 'deleteArea', 'deleteProduct', 'deleteUserStory',
+  'createArchitectureElement', 'createArea', 'createProduct', 'createRepo', 'createUserStory',
+  'deleteArchitectureElement', 'deleteArea', 'deleteProduct', 'deleteRepo', 'deleteUserStory',
   'getArchitectureForProduct', 'getArchitectureTree', 'getArea',
-  'getBriefForProduct', 'getProduct', 'getUserStory',
-  'listAreas', 'listProducts', 'listUserStories',
+  'getBriefForProduct', 'getProduct', 'getRepo', 'getUserStory',
+  'listAreas', 'listProducts', 'listRepos', 'listUserStories',
   'moveArchitectureElement',
-  'patchArchitectureElement', 'patchArea', 'patchBrief', 'patchProduct', 'patchUserStory',
+  'patchArchitectureElement', 'patchArea', 'patchBrief', 'patchProduct', 'patchRepo', 'patchUserStory',
 ];
 
 for (const entry of allSkillEntries) {
