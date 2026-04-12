@@ -71,6 +71,7 @@ Authored and maintained by the DefProd team.
 | `defprod-create-definition` | Populate brief + areas from codebase analysis | Onboarding |
 | `defprod-create-area-stories` | Create user stories with acceptance criteria from codebase | Definition |
 | `defprod-implement-feature` | User story alignment, implementation, verification workflow | Development |
+| `defprod-implement-product` | Scaffold project and implement product definition area-by-area | Development |
 | `defprod-fix-bug` | Trace bug to user story, fix, verify against acceptance criteria | Development |
 | `defprod-create-area-tests` | Generate e2e tests from user stories and acceptance criteria | Testing |
 | `defprod-run-area-tests` | Run area tests, classify failures as test vs production fault | Testing |
