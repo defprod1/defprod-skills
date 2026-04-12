@@ -9,9 +9,9 @@ allowed-tools:                              # Used by Claude Code for tool permi
   - Write
   - Edit
   - AskUserQuestion
-  - mcp__defprod-mcp__listProducts          # Use mcp__<server>__<tool> format in frontmatter only.
-  - mcp__defprod-mcp__listAreas             # In the skill body, use logical names (e.g. "call listAreas")
-  - mcp__defprod-mcp__listUserStories       # so the skill works across all compatible agents.
+  - mcp__defprod__listProducts          # Use mcp__<server>__<tool> format in frontmatter only.
+  - mcp__defprod__listAreas             # In the skill body, use logical names (e.g. "call listAreas")
+  - mcp__defprod__listUserStories       # so the skill works across all compatible agents.
 ---
 
 # {{Skill Title}}

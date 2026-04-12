@@ -10,23 +10,23 @@ allowed-tools:
   - Write
   - Edit
   - AskUserQuestion
-  - mcp__defprod-mcp__listProducts
-  - mcp__defprod-mcp__getProduct
-  - mcp__defprod-mcp__createProduct
-  - mcp__defprod-mcp__patchProduct
-  - mcp__defprod-mcp__getBriefForProduct
-  - mcp__defprod-mcp__patchBrief
-  - mcp__defprod-mcp__listAreas
-  - mcp__defprod-mcp__getArea
-  - mcp__defprod-mcp__createArea
-  - mcp__defprod-mcp__patchArea
-  - mcp__defprod-mcp__listUserStories
-  - mcp__defprod-mcp__getUserStory
-  - mcp__defprod-mcp__createUserStory
-  - mcp__defprod-mcp__patchUserStory
-  - mcp__defprod-mcp__getArchitectureForProduct
-  - mcp__defprod-mcp__getArchitectureTree
-  - mcp__defprod-mcp__createArchitectureElement
+  - mcp__defprod__listProducts
+  - mcp__defprod__getProduct
+  - mcp__defprod__createProduct
+  - mcp__defprod__patchProduct
+  - mcp__defprod__getBriefForProduct
+  - mcp__defprod__patchBrief
+  - mcp__defprod__listAreas
+  - mcp__defprod__getArea
+  - mcp__defprod__createArea
+  - mcp__defprod__patchArea
+  - mcp__defprod__listUserStories
+  - mcp__defprod__getUserStory
+  - mcp__defprod__createUserStory
+  - mcp__defprod__patchUserStory
+  - mcp__defprod__getArchitectureForProduct
+  - mcp__defprod__getArchitectureTree
+  - mcp__defprod__createArchitectureElement
 ---
 
 # Onboard Product
@@ -66,7 +66,7 @@ Before doing anything, check what already exists:
    - Call `getBriefForProduct` — check if the brief is populated (has description, problem, users, requirements).
    - Call `listAreas` — check if areas exist.
    - If areas exist, call `listUserStories` for each area — check if stories exist.
-3. Read `docs/defprod-onboarding.md` if it exists — this provides package paths, descriptions, and user notes from repo onboarding.
+3. Read `docs/defprod-onboarding.md` if it exists — this provides package paths, descriptions, user notes, and optionally a **Repo ID** from repo onboarding. If a `Repo ID` is present and is not `none`, record it for use in Phase 1 (product creation) and Phase 6 (completion).
 
 Based on what exists, skip to the earliest incomplete phase:
 
@@ -89,7 +89,18 @@ Create the product and populate its brief.
 
 #### 1a. Create product (if needed)
 
-If the product doesn't exist in DefProd, call `createProduct` with the name from the onboarding document or user input.
+If the product doesn't exist in DefProd, call `createProduct` with:
+- `name` — the product name from the onboarding document or user input
+- `teamId` — the team ID (from the MCP server's authentication context)
+
+If a **Repo ID** was recorded from the onboarding document (not `none`), also pass:
+- `repoId` — the repo entity ID
+- `repoPackagePath` — the primary package path for this product (from the onboarding document's product details)
+- `onboardingStatus` — set to `onboarding` to signal the guide UI that product definition is in progress
+
+The backend atomically links the created product to the repo's `products` array when `repoId` is provided — the skill does not need to call `patchRepo`.
+
+If no Repo ID is available (skill running outside the guide flow), call `createProduct` with just `name` and `teamId`. The product's `onboardingStatus` defaults to `idle`.
 
 #### 1b. Research the codebase
 
@@ -282,7 +293,19 @@ Call `createArchitectureElement` for each component, organising them into a tree
 
 ---
 
-### Phase 6 — Summary
+### Phase 6 — Completion & Summary
+
+#### 6a. Signal onboarding complete
+
+If the product was created with a `repoId` (i.e. a Repo ID was present in the onboarding document), call `patchProduct` to set `onboardingStatus` to `onboarded`:
+
+```json
+[{ "op": "replace", "path": "/onboardingStatus", "value": "onboarded" }]
+```
+
+This signals the guide UI that this product's definition is complete. If the product was created without a `repoId`, skip this step.
+
+#### 6b. Present summary
 
 Present the complete product definition:
 

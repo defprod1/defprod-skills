@@ -10,7 +10,7 @@ These skills work with any AI coding tool that discovers skills from `.claude/sk
 - **[Cursor](https://cursor.com)** — reads `.claude/skills/` and presents skills as available actions. Cursor ignores the `allowed-tools` frontmatter field (it uses its own rules system).
 - **[OpenCode](https://github.com/opencode-ai/opencode)** — discovers `.claude/skills/` and executes skills via its agent loop. OpenCode ignores unknown frontmatter fields.
 
-All three tools read SKILL.md files from the same `.claude/skills/` directory, which is the default install location for the `@defprod/skills` installer. Skill body text uses logical MCP tool names (e.g. "call `listAreas` from the defprod-mcp server") so the agent in any tool can resolve them correctly. Platform-specific `mcp__` prefixed names appear only in the `allowed-tools` frontmatter.
+All three tools read SKILL.md files from the same `.claude/skills/` directory, which is the default install location for the `@defprod/skills` installer. Skill body text uses logical MCP tool names (e.g. "call `listAreas` from the `defprod` MCP server") so the agent in any tool can resolve them correctly. Platform-specific `mcp__` prefixed names appear only in the `allowed-tools` frontmatter.
 
 To install skills to a different directory, use `--skills-dir` or set `skillsDir` in `.defprod/defprod.json` — see [Configuration](#configuration).
 

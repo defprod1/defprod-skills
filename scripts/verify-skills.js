@@ -6,7 +6,7 @@
  * Checks:
  * 1. SKILL.md frontmatter — valid YAML, required fields present
  * 2. Scaffolding removal — contrib skills must not contain {{placeholders}} or <!-- comments -->
- * 3. MCP tool name cross-reference — every mcp__defprod-mcp__* reference matches a known tool
+ * 3. MCP tool name cross-reference — every mcp__defprod__* reference matches a known tool
  * 4. Config key consistency — defprod.json keys mentioned in skills are documented in README
  * 5. Installer smoke test — run install into a temp dir, verify files land correctly
  */
@@ -136,10 +136,10 @@ for (const entry of allSkillEntries) {
   if (!fs.existsSync(skillFile)) continue;
 
   const content = fs.readFileSync(skillFile, 'utf8');
-  const mcpRefs = content.match(/mcp__defprod-mcp__(\w+)/g) || [];
+  const mcpRefs = content.match(/mcp__defprod__(\w+)/g) || [];
 
   for (const ref of mcpRefs) {
-    const toolName = ref.replace('mcp__defprod-mcp__', '');
+    const toolName = ref.replace('mcp__defprod__', '');
     if (!KNOWN_MCP_TOOLS.includes(toolName)) {
       fail(`${entry.label}/SKILL.md — unknown MCP tool: ${ref}`);
     }

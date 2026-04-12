@@ -8,14 +8,14 @@ allowed-tools:
   - Bash(ls:*)
   - Bash(cat:*)
   - AskUserQuestion
-  - mcp__defprod-mcp__listProducts
-  - mcp__defprod-mcp__getProduct
-  - mcp__defprod-mcp__listAreas
-  - mcp__defprod-mcp__getArea
-  - mcp__defprod-mcp__listUserStories
-  - mcp__defprod-mcp__createUserStory
-  - mcp__defprod-mcp__patchUserStory
-  - mcp__defprod-mcp__getBriefForProduct
+  - mcp__defprod__listProducts
+  - mcp__defprod__getProduct
+  - mcp__defprod__listAreas
+  - mcp__defprod__getArea
+  - mcp__defprod__listUserStories
+  - mcp__defprod__createUserStory
+  - mcp__defprod__patchUserStory
+  - mcp__defprod__getBriefForProduct
 ---
 
 # Create Area Stories

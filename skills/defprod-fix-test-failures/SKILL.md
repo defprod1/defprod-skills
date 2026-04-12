@@ -9,10 +9,10 @@ allowed-tools:
   - Write
   - Edit
   - AskUserQuestion
-  - mcp__defprod-mcp__listProducts
-  - mcp__defprod-mcp__listAreas
-  - mcp__defprod-mcp__listUserStories
-  - mcp__defprod-mcp__getUserStory
+  - mcp__defprod__listProducts
+  - mcp__defprod__listAreas
+  - mcp__defprod__listUserStories
+  - mcp__defprod__getUserStory
 ---
 
 # Fix Test Failures

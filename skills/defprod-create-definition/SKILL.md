@@ -8,12 +8,12 @@ allowed-tools:
   - Bash(ls:*)
   - Bash(cat:*)
   - AskUserQuestion
-  - mcp__defprod-mcp__listProducts
-  - mcp__defprod-mcp__getProduct
-  - mcp__defprod-mcp__getBriefForProduct
-  - mcp__defprod-mcp__patchBrief
-  - mcp__defprod-mcp__listAreas
-  - mcp__defprod-mcp__createArea
+  - mcp__defprod__listProducts
+  - mcp__defprod__getProduct
+  - mcp__defprod__getBriefForProduct
+  - mcp__defprod__patchBrief
+  - mcp__defprod__listAreas
+  - mcp__defprod__createArea
 ---
 
 # Create Definition
