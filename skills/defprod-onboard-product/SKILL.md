@@ -61,12 +61,36 @@ This skill consults `.defprod/defprod.json` for optional hints. If the file does
 
 Before doing anything, check what already exists:
 
-1. Call `listProducts` from the DefProd MCP server. Look for a product matching the provided name.
-2. If the product exists:
+1. Call `listProducts` from the DefProd MCP server.
+2. **Match against existing products**:
+   - **Exact match** (case-insensitive name match): proceed with this product — extract its ID and continue to step 3.
+   - **No exact match — check for similar products**: scan the full product list for names that resemble the requested name (e.g. substring match, word overlap, abbreviation match, or obvious typo). If one or more similar products exist, present them to the user:
+
+     > **No exact product match for "<requested-name>", but these existing products look similar:**
+     >
+     > | # | Name | ID |
+     > |---|------|----|
+     > | 1 | <similar-name-1> | <id> |
+     > | 2 | <similar-name-2> | <id> |
+     >
+     > **(a)** Continue with one of the above (specify the number)
+     > **(b)** Create a new product called "<requested-name>"
+
+     Wait for the user's choice. If they pick an existing product, use that product's ID and continue to step 3. If they choose to create new, proceed to Phase 1.
+   - **No match and no similar products**: proceed to Phase 1 (product creation).
+3. If the product exists (from step 2):
    - Call `getBriefForProduct` — check if the brief is populated (has description, problem, users, requirements).
    - Call `listAreas` — check if areas exist.
    - If areas exist, call `listUserStories` for each area — check if stories exist.
 3. Read `docs/defprod-onboarding.md` if it exists — this provides package paths, descriptions, user notes, and optionally a **Repo ID** from repo onboarding. If a `Repo ID` is present and is not `none`, record it for use in Phase 1 (product creation) and Phase 6 (completion).
+4. **Link existing product to Repo if unlinked**: If the product already exists (step 1) AND a Repo ID is available from the onboarding document (step 3) AND the product's `repoId` is not set, call `patchProduct` to establish the link:
+   ```json
+   [
+     { "op": "replace", "path": "/repoId", "value": "<repo-id>" },
+     { "op": "replace", "path": "/repoPackagePath", "value": "<package-path>" }
+   ]
+   ```
+   Use the primary package path for this product from the onboarding document's product details. This handles the case where products were created before the Repo entity existed.
 
 Based on what exists, skip to the earliest incomplete phase:
 

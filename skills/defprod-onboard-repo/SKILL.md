@@ -204,7 +204,11 @@ Then ask the user to review and adjust:
 
 #### 2c. Sync confirmed products to DefProd
 
-After the user confirms the product list, if a matching repo was found in Phase 1e, call `patchRepo` to set the `onboardingStatus` to `confirmed` and populate the `products` array in a single patch call:
+After the user confirms the product list, if a matching repo was found in Phase 1e:
+
+1. **Match against existing products**: Call `listProducts` to retrieve all products for the team. For each confirmed product candidate, check if a DefProd product with the same name already exists. If it does, record its `_id` as the `productId` for that entry.
+
+2. **Patch the repo**: Call `patchRepo` to set the `onboardingStatus` to `confirmed` and populate the `products` array in a single patch call. Include `productId` for any products that were matched in step 1:
 
 ```json
 [
@@ -216,7 +220,8 @@ After the user confirms the product list, if a matching repo was found in Phase 
       {
         "name": "Customer Portal",
         "mappingType": "single",
-        "packagePaths": ["apps/customer-portal"]
+        "packagePaths": ["apps/customer-portal"],
+        "productId": "6612f1a..."
       },
       {
         "name": "Admin API",
@@ -228,7 +233,7 @@ After the user confirms the product list, if a matching repo was found in Phase 
 ]
 ```
 
-Each entry in `products` must include `name` (the human-readable product name), `mappingType` (`single`, `partial`, or `multiple`), and `packagePaths` (array of package paths). Do **not** include `productId` — the backend populates this automatically when `/defprod-onboard-product` creates each product.
+Each entry in `products` must include `name` (the human-readable product name), `mappingType` (`single`, `partial`, or `multiple`), and `packagePaths` (array of package paths). Include `productId` when a matching product already exists in DefProd. Omit `productId` for products that don't exist yet — the backend populates it automatically when `/defprod-onboard-product` creates each product.
 
 If no matching repo was found in Phase 1e, skip this step.
 
