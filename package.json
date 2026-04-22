@@ -28,9 +28,15 @@
     "scripts/",
     "skills/",
     "contrib/",
+    "known-shipped.json",
     "LICENSE",
     "README.md"
   ],
+  "scripts": {
+    "generate-manifest": "node scripts/generate-manifest.js",
+    "verify": "node scripts/verify-skills.js",
+    "prepublishOnly": "node scripts/generate-manifest.js && node scripts/verify-skills.js"
+  },
   "engines": {
     "node": ">=18"
   }

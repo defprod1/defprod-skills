@@ -1,0 +1,56 @@
+{
+  "TEMPLATE/SKILL.md": [
+    "3a8a80efe2e945fd19c8d4f4dd631983839de686e9cc242ec71d16e99834cc63",
+    "3bd7a246f0d96fefd2e0868e7ddd5968507ffd2bccbfac7ece93da18c6a53fb9"
+  ],
+  "defprod-analyze-discrepancies/SKILL.md": [
+    "2785fbaa2339d4063a04047ab37710e6d07432a72859238616ce482e8e55ee8d",
+    "a5c053ad032a6d1f70531144b3134611464c85a2caa2e6674e0c3b20a056e779"
+  ],
+  "defprod-create-area-stories/SKILL.md": [
+    "1054d9db89d9dceef5e9e82eaf9cbc595c81b511c442c1c3d64a0443285c4417",
+    "8436896b11e47437250daf55fd2f40ad4e426b7c05098ce10b421cb17515724c",
+    "fc4ef2cd75998ae1dda1c5b18790a2e84279935c6627ceac2789e2e3a5fecea0"
+  ],
+  "defprod-create-area-tests/SKILL.md": [
+    "36f49385c3edd5b4cb3699e77b9a6dce6478f5b25fd36f66772760ad0591e35b",
+    "edfb0b095f29d4d4f9584403863148772e35c28d6f1cde4010ce8ee39c4f35e3"
+  ],
+  "defprod-create-definition/SKILL.md": [
+    "2b7058cda2e66a935904737a036e85429e58dabb7fa0487a28dd4bd2711f8a68",
+    "c99c87f4b93b2cf53bec8bfe381df6d911ac4bcaccd2eabaaaef31134a81fc01"
+  ],
+  "defprod-fix-bug/SKILL.md": [
+    "887f5ab5bd90743f33828c088e91f24c0b02c11d55a18f400f49b656c516259f",
+    "f2bb26f49f43fcb35b6d825ceea83823fb7055e578a9a9f175fdb0d2eba355ae"
+  ],
+  "defprod-fix-discrepancies/SKILL.md": [
+    "3f83bbfb06e2a45520133ca605312c53ee1a86473560521b8cf02df044c69cf6",
+    "611329e46210283d2be3826dba0b032803fb85e3d91f5d5d08e7b38e0bf3b98e"
+  ],
+  "defprod-fix-test-failures/SKILL.md": [
+    "4340cbdcae4b2784c8c53f22c582e8c226115684b74e21d7ad2af37b1312e3ac",
+    "9f6e67f1385aceec438e4a816ab0c91c815ced9013212b37e5dc042089501039"
+  ],
+  "defprod-implement-feature/SKILL.md": [
+    "745dd11504be2806630ff29a54b91dc7e01df68067541cdb6ae06a4861d26ffb",
+    "77b49e2df08842df66c74cb3a43ef97f5fd00b35bd7a08770a6c6bd008eb6eed"
+  ],
+  "defprod-implement-product/SKILL.md": [
+    "8176c835cbe28d551061b0b6fc2051b9c34fbc1a80a3f2316a552508d0cb6b1c"
+  ],
+  "defprod-onboard-product/SKILL.md": [
+    "06217f523a26af9a40aefcd471f85736bc7ea732efb34e50c091336466c452a6",
+    "a40c9d375b7fa3ce6a4eefa6237758391149d2baaf1de70debe40c92b810c827",
+    "edcf6b47884ae76dae80b4ac5277a9cfdd2a59f85aadff64df42b06aebad8802"
+  ],
+  "defprod-onboard-repo/SKILL.md": [
+    "0dee1cb84584f9dff66a80c03fcbb14bd30059797a5eccb9e0509ddf3ad19e7a",
+    "526e6480450f3b25d3174f70b71269eb5ff75bbaa1516625c09ca627c430e7e0",
+    "98d1323c4c8b8ab3cbd8747799581b451fa1e7716aab35e72816101843267b5e"
+  ],
+  "defprod-run-area-tests/SKILL.md": [
+    "21d04e069875b4801fe3e5b521948f77f2c9e1f109efd1e8248e327618c17066",
+    "4fca44b636066fd04e95ac5eab88acc8639e72447003948faf5a6df7142fec37"
+  ]
+}

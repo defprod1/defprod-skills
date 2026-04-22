@@ -2,11 +2,14 @@
 
 const fs = require('fs');
 const path = require('path');
+const crypto = require('crypto');
 
 const SKILL_PREFIX = 'defprod-';
 const SKILLS_SRC = path.join(__dirname, '..', 'skills');
 const CONTRIB_SRC = path.join(__dirname, '..', 'contrib');
+const SHIPPED_MANIFEST = path.join(__dirname, '..', 'known-shipped.json');
 const CONFIG_FILE = '.defprod/defprod.json';
+const LOCK_FILE = '.defprod/skills.lock.json';
 
 function usage() {
   console.log(`
@@ -125,26 +128,74 @@ function discoverSkills() {
   );
 }
 
-function copySkill(skillName, destDir) {
-  const src = path.join(SKILLS_SRC, skillName);
+function sha256File(filePath) {
+  return crypto.createHash('sha256').update(fs.readFileSync(filePath)).digest('hex');
+}
+
+function copySkillFrom(srcDir, skillName, destDir, lock) {
+  const src = path.join(srcDir, skillName);
   const dest = path.join(destDir, skillName);
   fs.mkdirSync(dest, { recursive: true });
 
   const files = fs.readdirSync(src);
   for (const file of files) {
-    fs.copyFileSync(path.join(src, file), path.join(dest, file));
+    const srcFile = path.join(src, file);
+    const destFile = path.join(dest, file);
+    fs.copyFileSync(srcFile, destFile);
+    recordLock(lock, skillName, file, sha256File(srcFile));
   }
   return files.length;
 }
 
-function filesMatch(a, b) {
-  if (!fs.existsSync(a) || !fs.existsSync(b)) return false;
-  return fs.readFileSync(a, 'utf8') === fs.readFileSync(b, 'utf8');
+function copySkill(skillName, destDir, lock) {
+  return copySkillFrom(SKILLS_SRC, skillName, destDir, lock);
+}
+
+function loadShippedManifest() {
+  try {
+    return JSON.parse(fs.readFileSync(SHIPPED_MANIFEST, 'utf8'));
+  } catch (_) {
+    return {};
+  }
+}
+
+function loadLock(targetDir) {
+  const lockPath = path.join(targetDir, LOCK_FILE);
+  if (!fs.existsSync(lockPath)) return { version: 1, skills: {} };
+  try {
+    const parsed = JSON.parse(fs.readFileSync(lockPath, 'utf8'));
+    if (!parsed || typeof parsed !== 'object' || !parsed.skills) {
+      return { version: 1, skills: {} };
+    }
+    return parsed;
+  } catch (_) {
+    return { version: 1, skills: {} };
+  }
+}
+
+function saveLock(targetDir, lock) {
+  const lockPath = path.join(targetDir, LOCK_FILE);
+  fs.mkdirSync(path.dirname(lockPath), { recursive: true });
+  fs.writeFileSync(lockPath, JSON.stringify(lock, null, 2) + '\n');
+}
+
+function recordLock(lock, skill, file, hash) {
+  if (!lock.skills[skill]) lock.skills[skill] = {};
+  lock.skills[skill][file] = hash;
+}
+
+function isPristine(destHash, skill, file, lock, shipped) {
+  const lockHash = lock.skills[skill] && lock.skills[skill][file];
+  if (lockHash && destHash === lockHash) return true;
+  const shippedHashes = shipped[`${skill}/${file}`];
+  return Array.isArray(shippedHashes) && shippedHashes.includes(destHash);
 }
 
 function install(targetDir, contribNames, args) {
   const skillsDir = resolveSkillsDir(targetDir, args);
   fs.mkdirSync(skillsDir, { recursive: true });
+
+  const lock = loadLock(targetDir);
 
   // Install official skills
   const skills = discoverSkills();
@@ -163,7 +214,7 @@ function install(targetDir, contribNames, args) {
       console.log(`  skip  ${skill}/ (already installed — use 'update' to refresh)`);
       skipped++;
     } else {
-      const count = copySkill(skill, skillsDir);
+      const count = copySkill(skill, skillsDir, lock);
       console.log(`  init  ${skill}/ (${count} file${count !== 1 ? 's' : ''})`);
       installed++;
     }
@@ -184,18 +235,14 @@ function install(targetDir, contribNames, args) {
         console.log(`  skip  ${name}/ (already installed — use 'update' to refresh)`);
         skipped++;
       } else {
-        const src = path.join(CONTRIB_SRC, name);
-        const destSkill = path.join(skillsDir, name);
-        fs.mkdirSync(destSkill, { recursive: true });
-        const files = fs.readdirSync(src);
-        for (const file of files) {
-          fs.copyFileSync(path.join(src, file), path.join(destSkill, file));
-        }
-        console.log(`  init  ${name}/ (${files.length} file${files.length !== 1 ? 's' : ''})`);
+        const count = copySkillFrom(CONTRIB_SRC, name, skillsDir, lock);
+        console.log(`  init  ${name}/ (${count} file${count !== 1 ? 's' : ''})`);
         installed++;
       }
     }
   }
+
+  saveLock(targetDir, lock);
 
   console.log(`\nDone. ${installed} skill${installed !== 1 ? 's' : ''} installed${skipped ? `, ${skipped} skipped` : ''}.`);
   console.log('\nGet started:');
@@ -205,7 +252,7 @@ function install(targetDir, contribNames, args) {
   console.log('\nFull guide: https://github.com/defprod1/defprod-skills#getting-started');
 }
 
-function updateSkillSet(label, srcDir, skillsDir, skills, stats) {
+function updateSkillSet(label, srcDir, skillsDir, skills, stats, lock, shipped) {
   if (skills.length === 0) return;
 
   console.log(`${label}:`);
@@ -216,8 +263,7 @@ function updateSkillSet(label, srcDir, skillsDir, skills, stats) {
     if (!fs.existsSync(dest)) {
       // Only auto-add official skills; community skills need explicit --contrib
       if (srcDir === SKILLS_SRC) {
-        copySkill(skill, skillsDir);
-        const count = fs.readdirSync(src).length;
+        const count = copySkillFrom(srcDir, skill, skillsDir, lock);
         console.log(`  add   ${skill}/ (${count} file${count !== 1 ? 's' : ''})`);
         stats.added++;
       }
@@ -230,12 +276,27 @@ function updateSkillSet(label, srcDir, skillsDir, skills, stats) {
     for (const file of srcFiles) {
       const srcFile = path.join(src, file);
       const destFile = path.join(dest, file);
+      const srcHash = sha256File(srcFile);
 
       if (!fs.existsSync(destFile)) {
         fs.copyFileSync(srcFile, destFile);
+        recordLock(lock, skill, file, srcHash);
         skillUpdated = true;
-      } else if (filesMatch(srcFile, destFile)) {
-        // Unchanged
+        continue;
+      }
+
+      const destHash = sha256File(destFile);
+
+      if (destHash === srcHash) {
+        // Already at latest. Backfill the lock for pre-1.2.3 installs.
+        recordLock(lock, skill, file, srcHash);
+        continue;
+      }
+
+      if (isPristine(destHash, skill, file, lock, shipped)) {
+        fs.copyFileSync(srcFile, destFile);
+        recordLock(lock, skill, file, srcHash);
+        skillUpdated = true;
       } else {
         stats.modified.push(`${skill}/${file}`);
       }
@@ -259,10 +320,12 @@ function update(targetDir, args) {
     process.exit(1);
   }
 
+  const lock = loadLock(targetDir);
+  const shipped = loadShippedManifest();
   const stats = { updated: 0, unchanged: 0, added: 0, modified: [] };
 
   // Update official skills
-  updateSkillSet('Official skills', SKILLS_SRC, skillsDir, discoverSkills(), stats);
+  updateSkillSet('Official skills', SKILLS_SRC, skillsDir, discoverSkills(), stats, lock, shipped);
 
   // Update installed community skills (only those already present)
   const contribSkills = discoverContribSkills();
@@ -271,8 +334,10 @@ function update(targetDir, args) {
   );
   if (installedContrib.length > 0) {
     console.log('');
-    updateSkillSet('Community skills', CONTRIB_SRC, skillsDir, installedContrib, stats);
+    updateSkillSet('Community skills', CONTRIB_SRC, skillsDir, installedContrib, stats, lock, shipped);
   }
+
+  saveLock(targetDir, lock);
 
   console.log(`\nUpdated ${stats.updated}, added ${stats.added}, unchanged ${stats.unchanged}.`);
 
