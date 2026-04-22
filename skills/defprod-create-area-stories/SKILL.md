@@ -121,7 +121,7 @@ Write stories covering all implemented capabilities. Use these categories as a c
 For each story, call `createUserStory` with:
 
 - `title` — what the user can do (e.g. "Invite team members by email")
-- `key` — short identifier within the area (e.g. `TEAM-INVITE`). Use the area key as prefix
+- `key` — area key prefix + 2-digit zero-padded number, numbered up from 01 (e.g. `TEAM-01`, `TEAM-02`, `AUTH-01`)
 - `areaId` — the area ID
 - `description` — "As a [persona], I want to [action] so that [benefit]"
 - `status` — `completed` (these describe existing, implemented capabilities)
@@ -157,7 +157,7 @@ Show the story titles as a checklist. Ask the user:
 - **All stories are `completed`** — this skill describes existing capabilities, not planned work. Every story should reflect something the codebase already implements.
 - **Every field on every story must be populated** — no empty descriptions, no missing acceptance criteria.
 - **Favour completeness over arbitrary targets** — if an area has 20 distinct capabilities, create 20 stories. Don't stop at 5 or 10.
-- **Keys must be unique within the product** — use the area key as prefix (e.g. `AUTH-LOGIN`, `AUTH-REGISTER`).
+- **Keys must be unique within the product** — use the area key as prefix followed by a 2-digit zero-padded number (e.g. `AUTH-01`, `AUTH-02`). When adding to an area that already has stories, continue numbering from the highest existing key.
 - **Acceptance criteria must be testable** — specific enough that a developer could write an automated test from them. "Works correctly" is not a criterion.
 - **Don't invent capabilities** — only create stories for features you can verify exist in the codebase. If unsure whether something is implemented, check the code.
 - **Batch MCP calls** where possible to minimise round trips.
