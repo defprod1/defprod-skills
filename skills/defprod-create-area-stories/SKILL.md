@@ -94,13 +94,28 @@ For each relevant module, read:
 - **Permissions** — access control rules and role checks
 - **Validation rules** — input constraints and business rules
 
+#### 2c. Build a capability matrix
+
+Before writing any stories, enumerate every entity the area exposes and record which verbs the codebase actually supports for it. This matrix is the coverage checklist for Phase 3.
+
+| Entity | List | Detail | Create | Edit | Delete | State transitions | Validations | Permissions / feature gates |
+|---|---|---|---|---|---|---|---|---|
+
+If the area description mentions "manage", "CRUD", "provisioning", "configuration", or similar, the matrix must show the write verbs. If the codebase does NOT expose writes but the area description implies them, flag this to the user and consider updating the area description — the area is read-only in reality.
+
 ---
 
 ### Phase 3 — Create Stories
 
-#### 3a. Draft stories
+#### 3a. Establish the canonical persona list
 
-Write stories covering all implemented capabilities. Use these categories as a checklist — skip any that don't apply to this area:
+Call `getBriefForProduct` (if not already fetched). Build the set of allowed persona titles from `brief.users[].title` (lowercased). Add one fallback: `"any signed-in user"` — usable for stories that cross personas (shell, profile, settings).
+
+Every story's description MUST begin with `"As a <canonical persona>, I want to …"`. Do NOT invent ad-hoc persona variants ("customer user with Radware DDoS", "VISP user in the satellite wizard"). If the story only applies under a condition, put the condition in the acceptance criteria and keep the persona canonical.
+
+#### 3b. Draft stories
+
+Write stories covering every implemented capability in the capability matrix. Use these categories as a checklist — skip any that don't apply to this area:
 
 1. **Listing/browsing** — viewing collections of items
 2. **Detail views** — viewing individual items
@@ -116,33 +131,72 @@ Write stories covering all implemented capabilities. Use these categories as a c
 12. **Validation** — input rules, constraints
 13. **Configuration** — settings, preferences
 
-#### 3b. Create stories via MCP
+Do NOT create a separate user story for each item in a sidenav, user menu, or tab bar. Collapse the navigation surface into ONE story whose AC lists the items as a table:
+
+> The user menu exposes the following items, each visible only when the named feature permission is enabled:
+>
+> | Label | Destination | Feature permission |
+> |---|---|---|
+> | … | … | … |
+
+#### 3c. Create stories via MCP
 
 For each story, call `createUserStory` with:
 
-- `title` — what the user can do (e.g. "Invite team members by email")
-- `key` — area key prefix + 2-digit zero-padded number, numbered up from 01 (e.g. `TEAM-01`, `TEAM-02`, `AUTH-01`)
+- `title` — what the user can do, phrased as an outcome not a locator. Every title must contain a user-facing verb (`see`, `open`, `create`, `edit`, `delete`, `submit`, `download`, `manage`, `raise`, `escalate`, `invite`, `assign`, `approve`, …). "Invite team members by email" ✅ / "TeamInviteComponent" ❌ / "Open /team/invite" ❌.
+- `key` — area key prefix + 2-digit zero-padded number, numbered up from 01 (e.g. `TEAM-01`, `TEAM-02`, `AUTH-01`). When adding to an area that already has stories, continue from the highest existing key.
 - `areaId` — the area ID
-- `description` — "As a [persona], I want to [action] so that [benefit]"
+- `description` — `"As a <canonical persona>, I want to <action> so that <benefit>."` Persona MUST come from the list built in Phase 3a.
 - `status` — `completed` (these describe existing, implemented capabilities)
 - `priority` — `high`, `medium`, or `low` based on the feature's centrality to the area
-- `acceptanceCriteria` — 3-8 specific, testable criteria per story
+- `acceptanceCriteria` — see rules below
 
-**Acceptance criteria guidelines:**
-- Each criterion must be independently verifiable
-- Use concrete values where possible ("displays a maximum of 50 items per page", not "displays a reasonable number of items")
-- Cover the happy path and key edge cases
-- Include validation behaviour where relevant ("shows an error when email format is invalid")
+##### Acceptance criteria rules
+
+- **Count: as many as are needed to thoroughly verify the story.** There is no minimum and no maximum. A simple read-only page may need 3; a multi-step wizard may need 12. Do not pad to hit a target and do not stop short to keep the story small. The right number is a function of the story's scope.
+- **User-observable, not implementation.** Each criterion must describe something the user can see, do, or experience. Component names, service/DAO class names, method calls, route constants used as routing config (`Route X maps to YComponent`), `canActivate`/`canDeactivate`/`ChangeGuard`, RxJS primitives (`Subject`, `Observable`, `ngOnInit`), `checkFeatureEnabled(...)`, and other TypeScript identifiers do NOT belong in acceptance criteria. Route URLs are allowed only as navigation outcomes (e.g. "clicking Services lands on `/portal/services`"), not as routing-module config.
+
+  | ❌ Implementation-leaky | ✅ User-observable |
+  |---|---|
+  | `Route /portal/services maps to PortalServiceListComponent with canDeactivate: [ChangeGuard] and breadcrumb 'My Services'.` | `Clicking "Services" in the sidenav shows the list of services with the breadcrumb "My Services". If the user has unsaved edits, they are prompted to confirm before navigating away.` |
+  | `onFilterToggle('Show Closed', value) sets this.showClosed to the boolean value.` | `Toggling "Show Closed" includes decommissioned and cancelled services in the list; toggling it off hides them.` |
+  | `The 'Manage API Keys' item is only rendered when checkFeatureEnabled(['API', 'Change API Keys']) is true.` | `The "Manage API Keys" menu item is visible only to users whose role includes the "Change API Keys" permission.` |
+
+- **Testable.** Specific enough that an e2e or unit test could assert it. "Works correctly" is not an acceptance criterion.
+- **Concrete values over adjectives.** "Up to 50 items per page" beats "a reasonable number".
+- **One concern per criterion.** Split compound criteria into separate lines.
+
+##### "Open the list at /X" archetype
+
+Route-opening stories are valid, but their acceptance criteria must focus on what the user sees and can do on that page, not on the route configuration:
+- Which personas / feature permissions make the entry point visible.
+- What the user sees on first load (columns, default sort/filter, empty-state text).
+- What actions are available and where they lead, from the user's point of view.
+- What happens to unsaved edits on navigation away (when relevant).
+
+Route wiring, component class names, and host-class selectors belong in architecture elements (a later skill), not in user stories.
 
 Batch creation: create up to 10 stories per batch to keep interactions manageable.
 
-#### 3c. Present summary
+#### 3d. Post-generation lint (mandatory)
 
-After creating all stories, present:
+Before presenting the summary, self-review every story created in this run. If a story fails any of the checks, patch it (`patchUserStory`) before proceeding.
 
-| Area | Stories Created | Categories Covered |
-|------|----------------|--------------------|
-| {area} | {count} | {list} |
+| Check | Trigger | Fix |
+|---|---|---|
+| AC implementation leak | Any acceptance criterion mentions a TypeScript identifier ending in `Component`/`Service`/`Module`, a method call like `name(...)`, an RxJS primitive (`Subject`, `Observable`), Angular lifecycle/guard identifiers (`ngOnInit`, `canActivate`, `canDeactivate`, `ChangeGuard`), `checkFeatureEnabled(`, or a route string used as routing-module config rather than a navigation destination. | Rewrite to user-observable wording using the examples above. |
+| Title lacks user verb | Title has no verb from the allowed set (`see`, `view`, `open`, `create`, `edit`, `delete`, `submit`, `download`, `filter`, `sort`, `navigate`, `manage`, `invite`, `assign`, `approve`, `raise`, `escalate`, …). | Reword the title to state the outcome. |
+| Persona not canonical | Story description's persona is not a `title` from `brief.users` or the fallback `"any signed-in user"`. | Swap in the closest canonical persona; move qualifiers into acceptance criteria. |
+| Write verbs missing but implied | Capability matrix shows write verbs (create/edit/delete/state-transition) for this area, but the stories contain none. | Add the missing stories before moving on. |
+| Thin area | Area ends with **fewer than 3 stories** after lint. | STOP and ask the user: (a) merge with neighbouring area, (b) delete the area, (c) continue researching for missing capabilities. Do not silently leave a stub. |
+
+#### 3e. Present summary
+
+After creating stories and running the lint, present:
+
+| Area | Stories Created | Categories Covered | Personas Used |
+|------|----------------|--------------------|---------------|
+| {area} | {count} | {list} | {list} |
 
 Show the story titles as a checklist. Ask the user:
 
@@ -157,6 +211,12 @@ Show the story titles as a checklist. Ask the user:
 - **All stories are `completed`** — this skill describes existing capabilities, not planned work. Every story should reflect something the codebase already implements.
 - **Every field on every story must be populated** — no empty descriptions, no missing acceptance criteria.
 - **Favour completeness over arbitrary targets** — if an area has 20 distinct capabilities, create 20 stories. Don't stop at 5 or 10.
+- **No minimum or maximum acceptance-criteria count** — write as many as the story needs for thorough verification, and no more. The right number is a function of story scope.
+- **Acceptance criteria are user-observable** — never cite component names, service names, method calls, route constants used as config, or other implementation identifiers. See Phase 3c.
+- **Personas are drawn from `brief.users`** — do not mint ad-hoc persona phrasings per story. See Phase 3a.
+- **Titles state outcomes, not locators** — route URLs can appear in acceptance criteria as navigation destinations when helpful.
+- **One story per navigation surface, not per item** — sidenavs, user menus, tab bars collapse into a single story with a table of items in acceptance criteria.
+- **Halt on thin areas** — if an area ends with fewer than 3 stories after lint, ask the user before moving on.
 - **Keys must be unique within the product** — use the area key as prefix followed by a 2-digit zero-padded number (e.g. `AUTH-01`, `AUTH-02`). When adding to an area that already has stories, continue numbering from the highest existing key.
 - **Acceptance criteria must be testable** — specific enough that a developer could write an automated test from them. "Works correctly" is not a criterion.
 - **Don't invent capabilities** — only create stories for features you can verify exist in the codebase. If unsure whether something is implemented, check the code.

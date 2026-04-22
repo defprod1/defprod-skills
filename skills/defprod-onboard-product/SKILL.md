@@ -158,7 +158,7 @@ Call `patchBrief` from the DefProd MCP server to populate each section. To avoid
 - `aesthetics.tone` — the product's communication tone
 - `aesthetics.style` — visual and interaction style principles
 - `aesthetics.principles` — 3-5 guiding design principles
-- `references` — links to relevant documentation, design systems, or resources
+- `references` — links to relevant documentation, design systems, or resources. **Always populate this**: include (a) the onboarding document at `docs/defprod-onboarding.md`, (b) the primary README for the package(s) that back this product, (c) any design docs, ADRs, or external references discovered in Phase 1b. Use `type: "other"` for internal docs and `type: "inspiration"` or `type: "competitor"` for external products. Leave `references` empty only if nothing was discovered.
 
 #### 1d. Present for review
 
@@ -220,14 +220,21 @@ For each area in scope, deep-dive the relevant source code:
 
 - Route definitions and page components
 - API endpoints, controllers, and services
-- Data models and schemas
+- Data models and schemas — enumerate every entity the area exposes
 - Test files (they reveal expected behaviour)
 - UI components and forms
 - Permissions and access control
 
+**Build a capability matrix before writing stories.** For each distinct entity (service, ticket, quote, subscriber, CPE device, …) in the area, tick which of these verbs the code actually supports and note the source of truth:
+
+| Entity | List | Detail | Create | Edit | Delete | State transitions | Validations | Permissions / feature gates |
+|---|---|---|---|---|---|---|---|---|
+
+Use the matrix as a coverage checklist when writing stories. An area that exposes writes in the codebase (forms, POST/PATCH endpoints, state-transition methods) but ends up with only read stories signals that Phase 3c stopped early — go back and add stories for the missing verbs. If the codebase genuinely only exposes reads, say so explicitly in the area's description and move on.
+
 #### 3c. Create stories
 
-For each area, create user stories covering all implemented capabilities. Use these categories as a checklist — skip any that don't apply:
+For each area, create user stories covering every implemented capability. Use these categories as a checklist — skip any that don't apply:
 
 1. **Listing/browsing** — viewing collections of items
 2. **Detail views** — viewing individual items
@@ -244,17 +251,75 @@ For each area, create user stories covering all implemented capabilities. Use th
 13. **Configuration** — settings, preferences
 
 For each story, call `createUserStory` with:
-- `title` — what the user can do (e.g. "Invite team members by email")
-- `key` — short identifier (e.g. `TEAM-INVITE`)
+- `title` — what the user can do, phrased as an outcome not a locator (e.g. "Invite team members by email", not "Open /team/invite"). Every title must contain a user-facing verb (`see`, `open`, `create`, `edit`, `delete`, `submit`, `download`, `manage`, `raise`, `escalate`, …).
+- `key` — area key prefix + 2-digit zero-padded number (e.g. `TEAM-01`, `TEAM-02`)
 - `areaId` — the area ID
-- `description` — "As a [persona], I want to [action] so that [benefit]"
+- `description` — `"As a <persona>, I want to <action> so that <benefit>."` The `<persona>` MUST be drawn from the canonical persona list — see **Persona reuse** below.
 - `status` — `completed` (these describe existing, implemented capabilities)
 - `priority` — `high`, `medium`, or `low`
-- `acceptanceCriteria` — 3-8 specific, testable criteria
+- `acceptanceCriteria` — see **Acceptance criteria** below
 
-#### 3d. Present summary
+##### Persona reuse (mandatory)
 
-After creating stories for each area, show a count and ask if the user wants to review any stories or continue to the next area.
+Build a canonical persona list from `brief.users` — each persona's `title` (lowercased) is a valid value. Add one fallback: `"any signed-in user"` for cross-cutting stories (shell, settings, profile).
+
+Every story's description MUST begin with one of those titles verbatim. Do NOT mint ad-hoc variants ("customer user with Radware DDoS", "customer user in the satellite wizard"). If the story only applies to a persona under a specific condition, put the condition in the acceptance criteria (`"The DDoS dashboard is only visible when the Radware integration is enabled."`) — keep the persona canonical.
+
+##### Acceptance criteria (mandatory rules)
+
+- **Count: as many as are needed to thoroughly verify the story.** There is no minimum beyond "enough to prove the story works" and no upper bound. Do not stop at 3 because the story is small; do not pad to 8 because the story is big. A simple read-only page may need 3; a multi-step wizard may need 12. Never add filler criteria to hit a target.
+- **Observable to the user, not the implementer.** Each criterion must describe something the user can see, do, or experience — not how the code achieves it. Class names, method calls, route constants, `canActivate`/`canDeactivate`, RxJS primitives, service/DAO identifiers, and Angular guard class names do NOT belong in acceptance criteria. Route URLs are allowed only as navigation outcomes ("clicking the Services tab lands on `/portal/services`"), not as routing-module configuration ("Route `/portal/services` maps to `PortalServiceListComponent`").
+
+  | ❌ Implementation-leaky | ✅ User-observable |
+  |---|---|
+  | `Route /portal/services maps to PortalServiceListComponent with canDeactivate: [ChangeGuard] and breadcrumb 'My Services'.` | `Clicking "Services" in the sidenav shows the list of services with the breadcrumb "My Services". If the user has unsaved edits, they are prompted to confirm before navigating away.` |
+  | `onFilterToggle('Show Closed', value) sets this.showClosed to the boolean value.` | `Toggling "Show Closed" includes decommissioned and cancelled services in the list; toggling it off hides them.` |
+  | `The 'Manage API Keys' item is only rendered when checkFeatureEnabled(['API', 'Change API Keys']) is true.` | `The "Manage API Keys" menu item is visible only to users whose role includes the "Change API Keys" permission.` |
+
+- **Testable.** Each criterion must be specific enough that an e2e or unit test could assert it. "Works correctly" is not a criterion.
+- **Concrete values over adjectives.** "Displays up to 50 items per page" beats "displays a reasonable number"; "shows an error when email is missing an @" beats "validates email".
+- **One concern per criterion.** Compound criteria ("Filters, sorts, and paginates work") should split into separate lines.
+
+##### "Open the list at /X" archetype
+
+Route-opening stories are valid, but their acceptance criteria must focus on what the user sees and can do on that page, not on the route configuration. A typical good shape:
+
+- Which personas / feature permissions make the entry point visible.
+- What is shown on first load (columns, empty-state text, default sort/filter).
+- What actions are available and what they navigate to from the user's perspective.
+- What happens to unsaved edits on navigation away (when relevant).
+
+A typical bad shape: `canDeactivate: [ChangeGuard]`, `host-class 'routedFlex'`, `routes [… ComponentName …]`. Move those details into the architecture elements (Phase 5) — they belong to implementation, not product.
+
+##### Collapsed menu / sidenav stories
+
+Do NOT create a separate user story for each item in a sidenav, user menu, or tab bar. Instead, create ONE story per navigation surface and enumerate the items as a table inside the acceptance criteria — each row captures the label, icon (if material), destination, and feature-permission gate. Example AC:
+
+> The user menu exposes the following items, each visible only when the named feature permission is enabled:
+>
+> | Label | Destination | Feature permission |
+> |---|---|---|
+> | Manage API Keys | `/portal/apikeys` | `API › Change API Keys` |
+> | Direct Theme Builder | `/portal/directthemebuilder` | `Tenant Configuration › Direct Theme Builder` |
+> | …
+
+This keeps the shell area from ballooning into 30+ trivia stories.
+
+#### 3d. Post-generation lint (mandatory)
+
+After creating stories for an area, before presenting the summary, self-review the stories against the checks below. If any story fails, patch it (via `patchUserStory`) before showing the results to the user.
+
+| Check | Trigger | Fix |
+|---|---|---|
+| AC implementation leak | Any acceptance criterion mentions a TypeScript identifier (`Component`, `Service`, `Subject`, `Observable`, `ngOnInit`, `canActivate`, `canDeactivate`, `checkFeatureEnabled(`, method-call syntax `name(...)`, or a route path used as routing-module config rather than a navigation destination). | Rewrite to user-observable wording using the examples above. |
+| Title lacks user verb | Title has no verb from the allowed set (`see`, `view`, `open`, `create`, `edit`, `delete`, `submit`, `download`, `filter`, `sort`, `navigate`, `manage`, `invite`, `assign`, `approve`, `raise`, `escalate`, …). | Reword the title to state the outcome. |
+| Persona not canonical | Story description's persona (`"As a …"`) is not a `title` from `brief.users` or the fallback `"any signed-in user"`. | Swap in the closest canonical persona; move any persona qualifier into acceptance criteria. |
+| Thin area | Area ends with **fewer than 3 stories** after this pass. | STOP and ask the user: (a) merge with neighbouring area, (b) delete the area, (c) continue researching for missing capabilities. Do not silently leave a stub area. |
+| Write verbs missing but implied | Area description mentions "manage", "CRUD", "provisioning", "configuration" etc. but the stories contain no create/edit/delete verbs and the capability matrix shows writes. | Add the missing stories before moving on. |
+
+#### 3e. Present summary
+
+After creating stories and running the lint, show a count, the persona mix used, and ask if the user wants to review any stories or continue to the next area.
 
 ---
 
@@ -353,7 +418,13 @@ Suggest next steps:
 - **Always check status first** — never recreate what already exists. Read before writing.
 - **Always get user confirmation** before creating areas or stories in bulk. Present proposals and wait for approval.
 - **Stories describe existing capabilities** — since this skill analyses an existing codebase, all stories should have `status: completed`. They describe what the product already does, not what it should do.
-- **Favour completeness over arbitrary targets** — don't stop at 5 stories per area if the codebase has 12 distinct capabilities. Cover everything that exists.
+- **Favour completeness over arbitrary targets** — cover every distinct capability the codebase exposes. Do not stop at any predetermined story count per area. Do not pad to hit one either.
+- **No minimum or maximum acceptance-criteria count** — write as many as the story needs for thorough verification, and no more. The right number is a function of the story's scope, not a target.
+- **Acceptance criteria are user-observable** — never cite component names, service names, method calls, route constants, guards, or other implementation identifiers in acceptance criteria. See Phase 3c.
+- **Personas are drawn from `brief.users`** — do not mint ad-hoc persona phrasings per story. See Phase 3c.
+- **Titles state outcomes, not locators** — `"Review the services I own"` beats `"Open /portal/services"`. Route URLs can appear in acceptance criteria as navigation destinations when helpful.
+- **One story per navigation surface, not per item** — sidenavs, user menus, tab bars collapse into a single story whose AC enumerates the items as a table.
+- **Halt on thin areas** — if an area ends with fewer than 3 stories after Phase 3d lint, ask the user before moving on.
 - **Don't reference internal tooling** — this skill should work with any codebase and test framework. Don't hardcode paths to specific tools or scripts.
 - **Description quality matters** — acceptance criteria should be specific enough that a developer or test framework can verify them. "Works correctly" is not an acceptance criterion.
 - **Batch MCP calls** where possible to minimise round trips.
