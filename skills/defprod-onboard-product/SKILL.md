@@ -197,6 +197,8 @@ For each confirmed area, call `createArea` from the DefProd MCP server with:
 - `productId` — the product ID
 - `description` — 1-2 sentences explaining the area's scope
 
+`createArea` returns `{areaId, key, name, productId}`. You will reference areas by `key` when creating stories in Phase 3 — there is no need to pair returned `areaId` UUIDs with requested keys, and doing so from memory across batches is where area-mismatch bugs come from.
+
 ---
 
 ### Phase 3 — User Stories
@@ -253,11 +255,15 @@ For each area, create user stories covering every implemented capability. Use th
 For each story, call `createUserStory` with:
 - `title` — what the user can do, phrased as an outcome not a locator (e.g. "Invite team members by email", not "Open /team/invite"). Every title must contain a user-facing verb (`see`, `open`, `create`, `edit`, `delete`, `submit`, `download`, `manage`, `raise`, `escalate`, …).
 - `key` — area key prefix + 2-digit zero-padded number (e.g. `TEAM-01`, `TEAM-02`)
-- `areaId` — the area ID
+- `areaKey` — the area's `key` (e.g. `TEAM`, `AUTH`). **Always prefer `areaKey` over `areaId`.** Opaque UUIDs carried in memory across batches drift silently and file stories under the wrong area; the semantic `areaKey` cannot. The backend also cross-checks that the story `key` starts with `${areaKey}-` and rejects mismatches.
 - `description` — `"As a <persona>, I want to <action> so that <benefit>."` The `<persona>` MUST be drawn from the canonical persona list — see **Persona reuse** below.
 - `status` — `completed` (these describe existing, implemented capabilities)
 - `priority` — `high`, `medium`, or `low`
 - `acceptanceCriteria` — see **Acceptance criteria** below
+
+**Before each batch**, call `listAreas` for the product to get the fresh `{_id, key, name}` mapping. Do not carry area identifiers in your head across batches — look them up every time.
+
+**After each batch**, call `listUserStories` for the target area and confirm every newly-created story key appears in the result. If any are missing, stop immediately and investigate — the missing stories landed under the wrong area.
 
 ##### Persona reuse (mandatory)
 
@@ -314,6 +320,7 @@ After creating stories for an area, before presenting the summary, self-review t
 | AC implementation leak | Any acceptance criterion mentions a TypeScript identifier (`Component`, `Service`, `Subject`, `Observable`, `ngOnInit`, `canActivate`, `canDeactivate`, `checkFeatureEnabled(`, method-call syntax `name(...)`, or a route path used as routing-module config rather than a navigation destination). | Rewrite to user-observable wording using the examples above. |
 | Title lacks user verb | Title has no verb from the allowed set (`see`, `view`, `open`, `create`, `edit`, `delete`, `submit`, `download`, `filter`, `sort`, `navigate`, `manage`, `invite`, `assign`, `approve`, `raise`, `escalate`, …). | Reword the title to state the outcome. |
 | Persona not canonical | Story description's persona (`"As a …"`) is not a `title` from `brief.users` or the fallback `"any signed-in user"`. | Swap in the closest canonical persona; move any persona qualifier into acceptance criteria. |
+| Story filed under wrong area | After each batch, `listUserStories` for the target area does not include every newly-created key. | Stop immediately. The story was filed elsewhere — find it, `patchUserStory` its `/areaId` to the correct area, and audit every other story created in the same run. |
 | Thin area | Area ends with **fewer than 3 stories** after this pass. | STOP and ask the user: (a) merge with neighbouring area, (b) delete the area, (c) continue researching for missing capabilities. Do not silently leave a stub area. |
 | Write verbs missing but implied | Area description mentions "manage", "CRUD", "provisioning", "configuration" etc. but the stories contain no create/edit/delete verbs and the capability matrix shows writes. | Add the missing stories before moving on. |
 
@@ -425,6 +432,7 @@ Suggest next steps:
 - **Titles state outcomes, not locators** — `"Review the services I own"` beats `"Open /portal/services"`. Route URLs can appear in acceptance criteria as navigation destinations when helpful.
 - **One story per navigation surface, not per item** — sidenavs, user menus, tab bars collapse into a single story whose AC enumerates the items as a table.
 - **Halt on thin areas** — if an area ends with fewer than 3 stories after Phase 3d lint, ask the user before moving on.
+- **Always pass `areaKey`, not `areaId`, on `createUserStory`** — semantic keys can't drift the way opaque UUIDs carried across batches can. Re-fetch via `listAreas` before each batch; verify via `listUserStories` after each batch.
 - **Don't reference internal tooling** — this skill should work with any codebase and test framework. Don't hardcode paths to specific tools or scripts.
 - **Description quality matters** — acceptance criteria should be specific enough that a developer or test framework can verify them. "Works correctly" is not an acceptance criterion.
 - **Batch MCP calls** where possible to minimise round trips.

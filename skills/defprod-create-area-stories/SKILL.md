@@ -145,7 +145,7 @@ For each story, call `createUserStory` with:
 
 - `title` — what the user can do, phrased as an outcome not a locator. Every title must contain a user-facing verb (`see`, `open`, `create`, `edit`, `delete`, `submit`, `download`, `manage`, `raise`, `escalate`, `invite`, `assign`, `approve`, …). "Invite team members by email" ✅ / "TeamInviteComponent" ❌ / "Open /team/invite" ❌.
 - `key` — area key prefix + 2-digit zero-padded number, numbered up from 01 (e.g. `TEAM-01`, `TEAM-02`, `AUTH-01`). When adding to an area that already has stories, continue from the highest existing key.
-- `areaId` — the area ID
+- `areaKey` — the area's `key` (e.g. `TEAM`, `AUTH`). **Always prefer `areaKey` over `areaId`.** Opaque UUIDs carried in memory across batches drift silently and file stories under the wrong area; the semantic `areaKey` cannot. The backend also cross-checks that the story `key` starts with `${areaKey}-` and rejects mismatches.
 - `description` — `"As a <canonical persona>, I want to <action> so that <benefit>."` Persona MUST come from the list built in Phase 3a.
 - `status` — `completed` (these describe existing, implemented capabilities)
 - `priority` — `high`, `medium`, or `low` based on the feature's centrality to the area
@@ -178,6 +178,10 @@ Route wiring, component class names, and host-class selectors belong in architec
 
 Batch creation: create up to 10 stories per batch to keep interactions manageable.
 
+**Before each batch**, call `listAreas` for the product to get the fresh `{_id, key, name}` mapping. Do not carry area identifiers in your head across batches — look them up every time. The `areaKey` you pass to `createUserStory` must come from this fresh lookup.
+
+**After each batch**, call `listUserStories` for the target area and confirm every newly-created story key appears in the result. If any are missing, stop immediately and investigate — the missing stories landed under the wrong area.
+
 #### 3d. Post-generation lint (mandatory)
 
 Before presenting the summary, self-review every story created in this run. If a story fails any of the checks, patch it (`patchUserStory`) before proceeding.
@@ -188,6 +192,7 @@ Before presenting the summary, self-review every story created in this run. If a
 | Title lacks user verb | Title has no verb from the allowed set (`see`, `view`, `open`, `create`, `edit`, `delete`, `submit`, `download`, `filter`, `sort`, `navigate`, `manage`, `invite`, `assign`, `approve`, `raise`, `escalate`, …). | Reword the title to state the outcome. |
 | Persona not canonical | Story description's persona is not a `title` from `brief.users` or the fallback `"any signed-in user"`. | Swap in the closest canonical persona; move qualifiers into acceptance criteria. |
 | Write verbs missing but implied | Capability matrix shows write verbs (create/edit/delete/state-transition) for this area, but the stories contain none. | Add the missing stories before moving on. |
+| Story filed under wrong area | After each batch, `listUserStories` for the target area does not include every newly-created key. | Stop immediately. The story was filed elsewhere — find it, `patchUserStory` its `/areaId` to the correct area, and audit every other story created in the same run. |
 | Thin area | Area ends with **fewer than 3 stories** after lint. | STOP and ask the user: (a) merge with neighbouring area, (b) delete the area, (c) continue researching for missing capabilities. Do not silently leave a stub. |
 
 #### 3e. Present summary
@@ -218,6 +223,7 @@ Show the story titles as a checklist. Ask the user:
 - **One story per navigation surface, not per item** — sidenavs, user menus, tab bars collapse into a single story with a table of items in acceptance criteria.
 - **Halt on thin areas** — if an area ends with fewer than 3 stories after lint, ask the user before moving on.
 - **Keys must be unique within the product** — use the area key as prefix followed by a 2-digit zero-padded number (e.g. `AUTH-01`, `AUTH-02`). When adding to an area that already has stories, continue numbering from the highest existing key.
+- **Always pass `areaKey`, not `areaId`** — semantic keys can't drift the way opaque UUIDs carried across batches can. Re-fetch via `listAreas` before each batch; verify via `listUserStories` after each batch.
 - **Acceptance criteria must be testable** — specific enough that a developer could write an automated test from them. "Works correctly" is not a criterion.
 - **Don't invent capabilities** — only create stories for features you can verify exist in the codebase. If unsure whether something is implemented, check the code.
 - **Batch MCP calls** where possible to minimise round trips.
