@@ -74,8 +74,12 @@ Authored and maintained by the DefProd team.
 | `defprod-implement-product` | Scaffold project and implement product definition area-by-area | Development |
 | `defprod-fix-bug` | Trace bug to user story, fix, verify against acceptance criteria | Development |
 | `defprod-create-area-tests` | Generate e2e tests from user stories and acceptance criteria | Testing |
+| `defprod-create-api-area-tests` | Generate Vitest/Jest HTTP integration tests for REST API stories | Testing |
+| `defprod-create-mcp-area-tests` | Generate Vitest integration tests for MCP server stories via @modelcontextprotocol/sdk | Testing |
+| `defprod-create-cli-area-tests` | Generate Jest subprocess tests for CLI stories | Testing |
 | `defprod-run-area-tests` | Run area tests, classify failures as test vs production fault | Testing |
 | `defprod-fix-test-failures` | Read test report, implement fixes | Testing |
+| `defprod-sync-story-test-status` | Run all configured suites and post per-story pass/fail to the DefProd test-status dashboard | Testing |
 | `defprod-analyze-discrepancies` | Find drift between product definition and code | Maintenance |
 | `defprod-fix-discrepancies` | Act on discrepancy report — update definition + code | Maintenance |
 
@@ -149,7 +153,15 @@ Each entry in `products` maps to a DefProd product. Skills match by `name` again
 | `products[].name` | `string` | Product name — must match the DefProd product name |
 | `products[].frontendApp` | `string` | Path to the frontend app |
 | `products[].backendApp` | `string` | Path to the backend app |
+| `products[].mcpApp` | `string` | Path to the MCP server app (used by `defprod-create-mcp-area-tests`) |
+| `products[].cliApp` | `string` | Path to the CLI app (used by `defprod-create-cli-area-tests`) |
 | `products[].e2eDir` | `string` | Path to the e2e test directory |
+| `products[].apiTestDir` | `string` | Path to the API integration test directory (default `<backendApp>/tests/areas`) |
+| `products[].mcpTestDir` | `string` | Path to the MCP integration test directory (default `<mcpApp>/tests/areas`) |
+| `products[].cliTestDir` | `string` | Path to the CLI integration test directory (default `<cliApp>/tests/areas`) |
+| `products[].apiBaseUrl` | `string` | Base URL for API integration tests |
+| `products[].mcpBaseUrl` | `string` | Base URL for the MCP server during integration tests |
+| `products[].cliBinaryPath` | `string` | Built CLI binary path (default `dist/<cliApp>/main.js`) |
 | `products[].compileCheck` | `string` | Command to verify compilation |
 
 ## Structure of a DefProd skill
