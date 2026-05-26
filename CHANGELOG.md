@@ -4,6 +4,20 @@ All notable changes to `@defprod/skills` are documented here. The format roughly
 
 The **source of truth for release notes is the [GitHub Releases](https://github.com/defprod1/defprod-skills/releases) page** for this repository. Each entry below mirrors a GitHub Release; click the version heading to read the full body, including any breaking-change upgrade guidance.
 
+## [1.3.1] — 2026-05-26
+
+### Added
+
+- Installer auto-prunes retired skill directories on `update`. Uses an explicit `retired-skills.json` list (never wildcard); pristine-check matches each file's hash against `known-shipped.json` before deleting. Locally-modified retired skills are kept and reported.
+- `install` now warns if retired skill directories are present locally (no deletion at install time).
+- `CHANGELOG.md` ships in the npm tarball; README links to it.
+
+### Changed
+
+- `npx @defprod/skills update` output gains a `pruned <N>` count and a separate "retired skills" section.
+
+See [v1.3.1 release notes](https://github.com/defprod1/defprod-skills/releases/tag/v1.3.1) for the full body.
+
 ## [1.3.0] — 2026-05-26
 
 ### Added
@@ -59,6 +73,7 @@ See [v1.1.0 release notes](https://github.com/defprod1/defprod-skills/releases/t
 
 Initial public release.
 
+[1.3.1]: https://github.com/defprod1/defprod-skills/releases/tag/v1.3.1
 [1.3.0]: https://github.com/defprod1/defprod-skills/releases/tag/v1.3.0
 [1.2.5]: https://github.com/defprod1/defprod-skills/releases/tag/v1.2.5
 [1.2.4]: https://github.com/defprod1/defprod-skills/releases/tag/v1.2.4
