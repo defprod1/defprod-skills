@@ -180,9 +180,70 @@ if (!fs.existsSync(README)) {
   }
 }
 
-// --- 5. Installer smoke test ---
+// --- 5. retired-skills.json shape ---
 
-console.log('\n5. Installer smoke test');
+console.log('\n5. Retired-skills manifest');
+
+const RETIRED_PATH = path.join(ROOT, 'retired-skills.json');
+const SHIPPED_PATH = path.join(ROOT, 'known-shipped.json');
+
+if (!fs.existsSync(RETIRED_PATH)) {
+  pass('retired-skills.json absent (no retired skills to track)');
+} else {
+  let retiredDoc;
+  try {
+    retiredDoc = JSON.parse(fs.readFileSync(RETIRED_PATH, 'utf8'));
+  } catch (e) {
+    fail(`retired-skills.json — not valid JSON: ${e.message}`);
+    retiredDoc = null;
+  }
+
+  if (retiredDoc) {
+    if (!Array.isArray(retiredDoc.retired)) {
+      fail('retired-skills.json — missing or non-array `retired` field');
+    } else {
+      let shipped = {};
+      if (fs.existsSync(SHIPPED_PATH)) {
+        try { shipped = JSON.parse(fs.readFileSync(SHIPPED_PATH, 'utf8')); } catch (_) { /* ignore */ }
+      }
+
+      for (const entry of retiredDoc.retired) {
+        if (!entry.name || typeof entry.name !== 'string') {
+          fail(`retired-skills.json — entry missing valid \`name\``);
+          continue;
+        }
+        if (!entry.retiredIn || typeof entry.retiredIn !== 'string') {
+          fail(`retired-skills.json — ${entry.name}: missing \`retiredIn\``);
+        }
+        if (!entry.reason || typeof entry.reason !== 'string') {
+          fail(`retired-skills.json — ${entry.name}: missing \`reason\``);
+        }
+
+        // The retired name MUST NOT still exist as a live skill.
+        if (fs.existsSync(path.join(SKILLS_DIR, entry.name))) {
+          fail(`retired-skills.json — ${entry.name}: dir still present in skills/ (retired but not removed)`);
+        }
+
+        // We need at least one historical hash for at least one file under this
+        // skill name in known-shipped.json, otherwise the installer's pristine
+        // check has nothing to compare against — it would conservatively keep
+        // every retired-skill dir as "modified".
+        const hasShippedHashes = Object.keys(shipped).some(k =>
+          k.startsWith(`${entry.name}/`) && Array.isArray(shipped[k]) && shipped[k].length > 0
+        );
+        if (!hasShippedHashes) {
+          fail(`retired-skills.json — ${entry.name}: no historical hashes in known-shipped.json (prune cannot verify pristine state)`);
+        }
+
+        pass(`retired-skills.json — ${entry.name} (retired in ${entry.retiredIn})`);
+      }
+    }
+  }
+}
+
+// --- 6. Installer smoke test ---
+
+console.log('\n6. Installer smoke test');
 
 const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'defprod-skills-test-'));
 

@@ -38,6 +38,15 @@ npx @defprod/skills update
 
 Pulls new versions of all installed skills — both official and community — without overwriting files you've modified locally. To accept an updated version of a file you've changed, delete your copy and run update again.
 
+### Auto-prune of retired skills
+
+When an official skill is renamed or removed across versions, its old directory name is added to a small explicit list (`retired-skills.json` in the package). On `update`, the installer checks the user's skills directory for any of those names and:
+
+- If a retired directory exists locally **and every file in it matches a hash this package previously shipped under that name**, the directory is deleted with a one-line `prune` log entry.
+- If any file has been locally modified, the directory is **kept** and reported so you can copy out your changes before removing it manually.
+
+The list is **explicit** (specific names), never a wildcard like `defprod-*` — so a user-created skill that happens to share the prefix is never touched. The pristine check uses the same hash manifest (`known-shipped.json`) that protects modified files from being overwritten elsewhere in `update`.
+
 ## Uninstall
 
 To remove a skill, delete its directory:

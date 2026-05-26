@@ -29,6 +29,7 @@
     "skills/",
     "contrib/",
     "known-shipped.json",
+    "retired-skills.json",
     "LICENSE",
     "README.md",
     "CHANGELOG.md"

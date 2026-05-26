@@ -1,0 +1,4 @@
+{
+  "$schema": "Explicit list of skill directory names that this package used to ship but no longer does. On `npx @defprod/skills update`, the installer prunes any of these that are present in the user's skills directory AND whose every file hash matches a hash previously shipped for that path (per known-shipped.json). Locally-modified retired skills are kept and reported, never silently deleted. To retire a new skill: add its entry here in the SAME release that removes its source from skills/, and bump the version. The presence of historical hashes in known-shipped.json is enforced by scripts/verify-skills.js.",
+  "retired": []
+}

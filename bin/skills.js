@@ -8,6 +8,7 @@ const SKILL_PREFIX = 'defprod-';
 const SKILLS_SRC = path.join(__dirname, '..', 'skills');
 const CONTRIB_SRC = path.join(__dirname, '..', 'contrib');
 const SHIPPED_MANIFEST = path.join(__dirname, '..', 'known-shipped.json');
+const RETIRED_MANIFEST = path.join(__dirname, '..', 'retired-skills.json');
 const CONFIG_FILE = '.defprod/defprod.json';
 const LOCK_FILE = '.defprod/skills.lock.json';
 
@@ -159,6 +160,32 @@ function loadShippedManifest() {
   }
 }
 
+function loadRetiredManifest() {
+  try {
+    const parsed = JSON.parse(fs.readFileSync(RETIRED_MANIFEST, 'utf8'));
+    if (!parsed || !Array.isArray(parsed.retired)) return { retired: [] };
+    return parsed;
+  } catch (_) {
+    return { retired: [] };
+  }
+}
+
+function isRetiredSkillPristine(skillName, skillPath, lock, shipped) {
+  // Every file in the dir must match a hash we have on record for that path
+  // (either the user's lock file or known-shipped.json). If any file is
+  // unrecognised, treat the dir as locally modified and keep it.
+  if (!fs.existsSync(skillPath)) return true;
+  const entries = fs.readdirSync(skillPath, { withFileTypes: true });
+  if (entries.length === 0) return true;
+  for (const entry of entries) {
+    if (entry.isDirectory()) return false;
+    const filePath = path.join(skillPath, entry.name);
+    const hash = sha256File(filePath);
+    if (!isPristine(hash, skillName, entry.name, lock, shipped)) return false;
+  }
+  return true;
+}
+
 function loadLock(targetDir) {
   const lockPath = path.join(targetDir, LOCK_FILE);
   if (!fs.existsSync(lockPath)) return { version: 1, skills: {} };
@@ -189,6 +216,38 @@ function isPristine(destHash, skill, file, lock, shipped) {
   if (lockHash && destHash === lockHash) return true;
   const shippedHashes = shipped[`${skill}/${file}`];
   return Array.isArray(shippedHashes) && shippedHashes.includes(destHash);
+}
+
+function warnRetiredOnInstall(skillsDir) {
+  const { retired } = loadRetiredManifest();
+  const present = retired.filter(r => fs.existsSync(path.join(skillsDir, r.name)));
+  if (present.length === 0) return;
+  console.log('\nRetired skills still present locally (run "update" to auto-prune unmodified ones):');
+  for (const entry of present) {
+    const successorBit = entry.supersededBy ? ` — superseded by ${entry.supersededBy}` : '';
+    console.log(`  ${entry.name}/ (retired in ${entry.retiredIn})${successorBit}`);
+  }
+}
+
+function pruneRetiredSkills(skillsDir, lock, shipped, stats) {
+  const { retired } = loadRetiredManifest();
+  if (retired.length === 0) return;
+  const candidates = retired.filter(r => fs.existsSync(path.join(skillsDir, r.name)));
+  if (candidates.length === 0) return;
+  console.log('\nRetired skills:');
+  for (const entry of candidates) {
+    const skillPath = path.join(skillsDir, entry.name);
+    const successorBit = entry.supersededBy ? ` — superseded by ${entry.supersededBy}` : '';
+    if (isRetiredSkillPristine(entry.name, skillPath, lock, shipped)) {
+      fs.rmSync(skillPath, { recursive: true, force: true });
+      if (lock.skills[entry.name]) delete lock.skills[entry.name];
+      console.log(`  prune ${entry.name}/ (retired in ${entry.retiredIn})${successorBit}`);
+      stats.pruned++;
+    } else {
+      console.log(`  keep  ${entry.name}/ — locally modified (remove manually after copying any changes)`);
+      stats.retainedRetired.push(entry.name);
+    }
+  }
 }
 
 function install(targetDir, contribNames, args) {
@@ -241,6 +300,8 @@ function install(targetDir, contribNames, args) {
       }
     }
   }
+
+  warnRetiredOnInstall(skillsDir);
 
   saveLock(targetDir, lock);
 
@@ -322,7 +383,7 @@ function update(targetDir, args) {
 
   const lock = loadLock(targetDir);
   const shipped = loadShippedManifest();
-  const stats = { updated: 0, unchanged: 0, added: 0, modified: [] };
+  const stats = { updated: 0, unchanged: 0, added: 0, pruned: 0, modified: [], retainedRetired: [] };
 
   // Update official skills
   updateSkillSet('Official skills', SKILLS_SRC, skillsDir, discoverSkills(), stats, lock, shipped);
@@ -337,9 +398,12 @@ function update(targetDir, args) {
     updateSkillSet('Community skills', CONTRIB_SRC, skillsDir, installedContrib, stats, lock, shipped);
   }
 
+  // Prune retired official skills (explicit list — never wildcard-deletes user dirs)
+  pruneRetiredSkills(skillsDir, lock, shipped, stats);
+
   saveLock(targetDir, lock);
 
-  console.log(`\nUpdated ${stats.updated}, added ${stats.added}, unchanged ${stats.unchanged}.`);
+  console.log(`\nUpdated ${stats.updated}, added ${stats.added}, pruned ${stats.pruned}, unchanged ${stats.unchanged}.`);
 
   if (stats.modified.length > 0) {
     console.log(`\nLocally modified files (not overwritten):`);
@@ -347,6 +411,14 @@ function update(targetDir, args) {
       console.log(`  ${f}`);
     }
     console.log('\nTo accept the new version, delete the file and run update again.');
+  }
+
+  if (stats.retainedRetired.length > 0) {
+    console.log(`\nRetired skills kept due to local modifications:`);
+    for (const name of stats.retainedRetired) {
+      console.log(`  ${name}/`);
+    }
+    console.log('\nCopy any local changes elsewhere, then remove the directory manually.');
   }
 }
 
