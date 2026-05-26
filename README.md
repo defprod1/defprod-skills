@@ -57,7 +57,7 @@ After installing, follow these steps to go from zero to a fully onboarded reposi
 3. **Start building with definition sync** — your products are now defined. Use these skills in your daily workflow:
    - `/defprod-implement-feature` — aligns every code change to a user story before you write it
    - `/defprod-fix-bug` — traces bugs back to acceptance criteria and verifies the fix against them
-   - `/defprod-create-area-tests` — generates e2e tests directly from your user stories
+   - `/defprod-create-area-tests` — surface-aware dispatcher that generates the right tests for every story in an area (UI, API, MCP, CLI)
    - `/defprod-analyze-discrepancies` — catches drift between your definition and your code
 
 ## Official Skills
@@ -73,10 +73,11 @@ Authored and maintained by the DefProd team.
 | `defprod-implement-feature` | User story alignment, implementation, verification workflow | Development |
 | `defprod-implement-product` | Scaffold project and implement product definition area-by-area | Development |
 | `defprod-fix-bug` | Trace bug to user story, fix, verify against acceptance criteria | Development |
-| `defprod-create-area-tests` | Generate e2e tests from user stories and acceptance criteria | Testing |
-| `defprod-create-api-area-tests` | Generate Vitest/Jest HTTP integration tests for REST API stories | Testing |
-| `defprod-create-mcp-area-tests` | Generate Vitest integration tests for MCP server stories via @modelcontextprotocol/sdk | Testing |
-| `defprod-create-cli-area-tests` | Generate Jest subprocess tests for CLI stories | Testing |
+| `defprod-create-area-tests` | Surface-aware dispatcher — groups stories by `surface` and routes to the per-surface sibling skills | Testing |
+| `defprod-create-ui-tests` | Generate Playwright e2e tests for stories whose surface is `ui` | Testing |
+| `defprod-create-api-tests` | Generate Vitest/Jest HTTP integration tests for stories whose surface is `api` | Testing |
+| `defprod-create-mcp-tests` | Generate Vitest integration tests for stories whose surface is `mcp` (via @modelcontextprotocol/sdk) | Testing |
+| `defprod-create-cli-tests` | Generate Jest subprocess tests for stories whose surface is `cli` | Testing |
 | `defprod-run-area-tests` | Run area tests, classify failures as test vs production fault | Testing |
 | `defprod-fix-test-failures` | Read test report, implement fixes | Testing |
 | `defprod-sync-story-test-status` | Run all configured suites and post per-story pass/fail to the DefProd test-status dashboard | Testing |
@@ -153,8 +154,8 @@ Each entry in `products` maps to a DefProd product. Skills match by `name` again
 | `products[].name` | `string` | Product name — must match the DefProd product name |
 | `products[].frontendApp` | `string` | Path to the frontend app |
 | `products[].backendApp` | `string` | Path to the backend app |
-| `products[].mcpApp` | `string` | Path to the MCP server app (used by `defprod-create-mcp-area-tests`) |
-| `products[].cliApp` | `string` | Path to the CLI app (used by `defprod-create-cli-area-tests`) |
+| `products[].mcpApp` | `string` | Path to the MCP server app (used by `defprod-create-mcp-tests`) |
+| `products[].cliApp` | `string` | Path to the CLI app (used by `defprod-create-cli-tests`) |
 | `products[].e2eDir` | `string` | Path to the e2e test directory |
 | `products[].apiTestDir` | `string` | Path to the API integration test directory (default `<backendApp>/tests/areas`) |
 | `products[].mcpTestDir` | `string` | Path to the MCP integration test directory (default `<mcpApp>/tests/areas`) |

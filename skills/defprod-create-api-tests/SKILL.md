@@ -1,6 +1,6 @@
 ---
-name: defprod-create-api-area-tests
-description: Generates HTTP integration tests for the REST API area of a DefProd product. One spec file per user story, one test() call per acceptance criterion, asserting against the project's RPC envelope. Use when the API area has user stories you want automated tests for.
+name: defprod-create-api-tests
+description: Generates HTTP integration tests for user stories whose surface is `api` (explicit or inferred from the `API-…` story-key prefix). One spec file per in-scope story, one `test()` per acceptance criterion, asserting against the project's RPC envelope. Use for REST / HTTP test generation against any area that contains API stories.
 allowed-tools:
   - Read
   - Glob
@@ -15,17 +15,17 @@ allowed-tools:
   - mcp__defprod__getUserStory
 ---
 
-# Create API Area Tests
+# Create API Tests
 
-Generates HTTP integration tests for a non-UI DefProd area by reading user stories and acceptance criteria from DefProd. Each story gets its own test file with one `test()` call per acceptance criterion. Designed for backend / REST surfaces where the natural test runner is Vitest (preferred) or Jest, running against a live server's RPC endpoint.
+Generates HTTP integration tests for the stories in a product area whose surface is `api` — either set explicitly via `UserStory.surface = 'api'`, or inferred from the `API-…` story-key prefix when `surface` is unset. Each in-scope story gets its own test file with one `test()` call per acceptance criterion. Designed for backend / REST surfaces where the natural test runner is Vitest (preferred) or Jest, running against a live server's RPC endpoint. Stories on other surfaces are skipped with a one-line log entry — invoke the matching sibling skill, or `/defprod-create-area-tests` (the surface-aware dispatcher) for an end-to-end area walk.
 
-This is the non-UI sibling of `defprod-create-area-tests` (e2e / Playwright). Same per-AC contract; HTTP-integration harness instead of a browser.
+This is the API-surface sibling of `defprod-create-ui-tests` (Playwright), `defprod-create-mcp-tests` (MCP SDK), and `defprod-create-cli-tests` (subprocess). Same per-AC contract; surface filter selects which stories the skill operates on.
 
 ## When to use
 
-- The product has an `API` area (or similar REST surface) with user stories that need automated coverage.
-- Invoked via `/defprod-create-api-area-tests <product-name> <area-key>`.
-- Do not use for UI tests — use `defprod-create-area-tests`.
+- The product has an area whose stories include REST / RPC surfaces (typically an `API` area, but the filter also picks up API stories from a mixed-surface area like `STATUS`).
+- Invoked via `/defprod-create-api-tests <product-name> <area-key>`.
+- Do not use for UI / MCP / CLI stories — invoke the matching sibling skill or the `/defprod-create-area-tests` dispatcher.
 
 ## Inputs
 
@@ -57,7 +57,23 @@ This skill consults `.defprod/defprod.json` for optional hints. If absent, the s
 
 If the area has no stories, halt and suggest `/defprod-create-area-stories`.
 
-#### 1b. Check for existing tests
+#### 1b. Filter stories by surface (target: `api`)
+
+For every story returned by `listUserStories`, determine its **effective surface** before deciding whether it is in scope:
+
+1. If `story.surface` is set explicitly, use that value.
+2. Otherwise, fall back to the story-key prefix mapping from `libs/defprod-common/src/lib/modules/user-story/infer-surface-from-story-key.util.ts`:
+   - `API-…` infers `api`, `MCP-…` infers `mcp`, `CLI-…` infers `cli`. Anything else infers nothing → unspecified.
+3. **In-scope set**: stories whose effective surface is `api`.
+4. **Out-of-scope set**: every other story. Log each with one line, then move on:
+   - `Skipped <STORY-KEY> (<title>): surface=<value> (explicit|inferred|unspecified); this skill targets api.`
+
+Record the `(explicit|inferred)` tag per in-scope story too — Phase 5c flags inference-routed stories in the coverage summary.
+
+If the in-scope set is empty, halt with:
+> No API stories found in this area (no story has surface=api, explicit or inferred). Skipping.
+
+#### 1c. Check for existing tests
 
 Look under the api test directory (`<backendApp>/tests/areas/<AREA>/` by default). If specs exist for some stories, ask the user:
 
@@ -194,15 +210,21 @@ Iterate until green or every remaining failure is a tracked product issue.
 
 #### 5c. Present coverage summary
 
-| Story | Key | Total ACs | Testable | `test()` calls | Passing | Status |
-|---|---|---:|---:|---:|---:|---|
-| ... | ... | ... | ... | ... | ... | Pass/Fail |
+| Story | Key | Surface | Total ACs | Testable | `test()` calls | Passing | Status |
+|---|---|---|---:|---:|---:|---:|---|
+| ... | ... | `api` *(inferred)* / `api` | ... | ... | ... | ... | Pass/Fail |
+
+Mark the **Surface** column with *(inferred)* for any story routed in via inference rather than an explicit `surface` value — those are candidates for a `patchUserStory /surface` backfill so future runs no longer rely on the inference helper.
+
+**Out-of-scope stories** (other surfaces, skipped):
+- `<STORY-KEY>` — `<surface>` (explicit|inferred|unspecified). Use `/defprod-create-<surface>-tests`, or `/defprod-create-area-tests` for an area-wide walk.
 
 Flag any row where `test()` calls != testable ACs. List untestable items with their reasons. List any production-gap tags applied.
 
 Suggest:
 
 > **Next steps:**
+> - Backfill `surface` on any inference-routed stories you want to lock to API.
 > - Run `/defprod-run-area-tests <area>` to produce a classified failure report.
 > - Once all green, commit and consider whether `/defprod-sync-story-test-status` should publish coverage to the dashboard.
 

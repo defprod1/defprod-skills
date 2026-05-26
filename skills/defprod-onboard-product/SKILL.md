@@ -414,7 +414,7 @@ Present the complete product definition:
 Suggest next steps:
 
 > **Next steps:**
-> - Run `/defprod-create-area-tests <area>` to generate e2e tests from your user stories
+> - Run `/defprod-create-area-tests <product> <area>` to generate tests for every story in an area — the surface-aware dispatcher routes UI / API / MCP / CLI stories to the matching per-surface skill
 > - Run `/defprod-analyze-discrepancies <area>` periodically to catch drift
 > - Use `/defprod-implement-feature` when building new features — it ensures user story alignment
 

@@ -1,6 +1,6 @@
 ---
-name: defprod-create-cli-area-tests
-description: Generates subprocess integration tests for the CLI area of a DefProd product. One spec file per user story, one test() call per acceptance criterion, exercised by spawning the built CLI binary one-shot per assertion. Use when the CLI area has user stories you want automated tests for.
+name: defprod-create-cli-tests
+description: Generates subprocess integration tests for user stories whose surface is `cli` (explicit or inferred from the `CLI-…` story-key prefix). One spec file per in-scope story, one `test()` per acceptance criterion, exercised by spawning the built CLI binary one-shot per assertion. Use for CLI test generation against any area that contains CLI stories.
 allowed-tools:
   - Read
   - Glob
@@ -15,17 +15,19 @@ allowed-tools:
   - mcp__defprod__getUserStory
 ---
 
-# Create CLI Area Tests
+# Create CLI Tests
 
-Generates CLI integration tests by reading user stories and acceptance criteria from DefProd. Each story gets its own test file with one `test()` per acceptance criterion. The harness spawns the built CLI binary as a one-shot Node subprocess per assertion, captures `stdout` / `stderr` / `exitCode`, and asserts on the observable surface.
+Generates CLI integration tests for the stories in a product area whose surface is `cli` — either set explicitly via `UserStory.surface = 'cli'`, or inferred from the `CLI-…` story-key prefix when `surface` is unset. Each in-scope story gets its own test file with one `test()` per acceptance criterion. The harness spawns the built CLI binary as a one-shot Node subprocess per assertion, captures `stdout` / `stderr` / `exitCode`, and asserts on the observable surface. Stories on other surfaces are skipped with a one-line log entry — invoke the matching sibling skill, or `/defprod-create-area-tests` (the surface-aware dispatcher) for an end-to-end area walk.
 
-This is the CLI-flavoured sibling of `defprod-create-area-tests` (e2e), `defprod-create-api-area-tests` (REST), and `defprod-create-mcp-area-tests` (MCP). Same per-AC contract; subprocess harness instead.
+This is the CLI-surface sibling of `defprod-create-ui-tests` (Playwright), `defprod-create-api-tests` (REST), and `defprod-create-mcp-tests` (MCP). Same per-AC contract; subprocess harness instead.
+
+Shell-script "straggler" stories carrying `surface = 'script'` are out of scope here — they will be skipped. (A future `defprod-create-script-tests` sibling may pick them up; until then, set their surface to `cli` only if they invoke the built CLI binary, otherwise generate manually.)
 
 ## When to use
 
-- The product has a `CLI` area (or similar command-line surface) with user stories that need automated coverage.
-- A shell-script "straggler" story under a STATUS or OPS area that should be tested by spawning the script as a subprocess works here too.
-- Invoked via `/defprod-create-cli-area-tests <product-name> <area-key>`.
+- The product has an area whose stories include the built CLI binary as the surface (typically a `CLI` area, but the filter also picks up CLI stories from a mixed-surface area).
+- Invoked via `/defprod-create-cli-tests <product-name> <area-key>`.
+- Do not use for UI / REST / MCP stories — invoke the matching sibling skill or the `/defprod-create-area-tests` dispatcher.
 
 ## Inputs
 
@@ -55,7 +57,23 @@ This skill consults `.defprod/defprod.json` for optional hints.
 2. Call `listAreas` and find the area by key (typically `CLI`).
 3. Call `listUserStories` for the area.
 
-#### 1b. Check for existing tests
+#### 1b. Filter stories by surface (target: `cli`)
+
+For every story returned by `listUserStories`, determine its **effective surface** before deciding whether it is in scope:
+
+1. If `story.surface` is set explicitly, use that value.
+2. Otherwise, fall back to the story-key prefix mapping from `libs/defprod-common/src/lib/modules/user-story/infer-surface-from-story-key.util.ts`:
+   - `API-…` infers `api`, `MCP-…` infers `mcp`, `CLI-…` infers `cli`. Anything else infers nothing → unspecified.
+3. **In-scope set**: stories whose effective surface is `cli`.
+4. **Out-of-scope set**: every other story. Log each with one line, then move on:
+   - `Skipped <STORY-KEY> (<title>): surface=<value> (explicit|inferred|unspecified); this skill targets cli.`
+
+Record the `(explicit|inferred)` tag per in-scope story too — Phase 5c flags inference-routed stories in the coverage summary.
+
+If the in-scope set is empty, halt with:
+> No CLI stories found in this area (no story has surface=cli, explicit or inferred). Skipping.
+
+#### 1c. Check for existing tests
 
 Look under the CLI test directory. If specs exist for some stories, ask: Fill gaps / Replace all / Cancel.
 
@@ -193,7 +211,22 @@ Classify each failure as **test fault** (wrong args, wrong assertion, fixture of
 
 #### 5c. Present coverage summary
 
-Same table format. Flag mismatches. List untestable items + reasons. List production-gap tags applied. List any production fixes applied in this run.
+| Story | Key | Surface | Total ACs | Testable | `test()` calls | Passing | Status |
+|---|---|---|---:|---:|---:|---:|---|
+| ... | ... | `cli` *(inferred)* / `cli` | ... | ... | ... | ... | Pass/Fail |
+
+Mark the **Surface** column with *(inferred)* for any story routed in via inference rather than an explicit `surface` value — those are candidates for a `patchUserStory /surface` backfill.
+
+**Out-of-scope stories** (other surfaces, skipped):
+- `<STORY-KEY>` — `<surface>` (explicit|inferred|unspecified). Use `/defprod-create-<surface>-tests`, or `/defprod-create-area-tests` for an area-wide walk.
+
+Flag mismatches. List untestable items + reasons. List production-gap tags applied. List any production fixes applied in this run.
+
+Suggest:
+
+> **Next steps:**
+> - Backfill `surface` on any inference-routed stories you want to lock to CLI.
+> - Run `/defprod-run-area-tests <area>` to produce a classified failure report.
 
 ---
 

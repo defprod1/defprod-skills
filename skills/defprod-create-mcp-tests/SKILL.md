@@ -1,6 +1,6 @@
 ---
-name: defprod-create-mcp-area-tests
-description: Generates integration tests for the MCP area of a DefProd product, using the official @modelcontextprotocol/sdk client. One spec file per user story, one test() call per acceptance criterion, exercised through the running MCP server. Use when the MCP area has user stories you want automated tests for.
+name: defprod-create-mcp-tests
+description: Generates integration tests for user stories whose surface is `mcp` (explicit or inferred from the `MCP-…` story-key prefix), using the official @modelcontextprotocol/sdk client. One spec file per in-scope story, one `test()` per acceptance criterion, exercised through the running MCP server. Use for MCP test generation against any area that contains MCP stories.
 allowed-tools:
   - Read
   - Glob
@@ -15,17 +15,17 @@ allowed-tools:
   - mcp__defprod__getUserStory
 ---
 
-# Create MCP Area Tests
+# Create MCP Tests
 
-Generates MCP integration tests by reading user stories and acceptance criteria from DefProd. Each story gets its own test file with one `test()` per acceptance criterion. The harness uses the official `@modelcontextprotocol/sdk` client connected over the streamable-HTTP `/mcp` endpoint (and the SSE `/mcp/sse` + `/mcp/messages` endpoints when the story explicitly requires SSE).
+Generates MCP integration tests for the stories in a product area whose surface is `mcp` — either set explicitly via `UserStory.surface = 'mcp'`, or inferred from the `MCP-…` story-key prefix when `surface` is unset. Each in-scope story gets its own test file with one `test()` per acceptance criterion. The harness uses the official `@modelcontextprotocol/sdk` client connected over the streamable-HTTP `/mcp` endpoint (and the SSE `/mcp/sse` + `/mcp/messages` endpoints when the story explicitly requires SSE). Stories on other surfaces are skipped with a one-line log entry — invoke the matching sibling skill, or `/defprod-create-area-tests` (the surface-aware dispatcher) for an end-to-end area walk.
 
-This is the MCP-flavoured sibling of `defprod-create-area-tests` (e2e / Playwright) and `defprod-create-api-area-tests` (REST). Same per-AC contract, different harness.
+This is the MCP-surface sibling of `defprod-create-ui-tests` (Playwright), `defprod-create-api-tests` (REST), and `defprod-create-cli-tests` (subprocess). Same per-AC contract, different harness.
 
 ## When to use
 
-- The product has an `MCP` area with user stories that need automated coverage.
-- Invoked via `/defprod-create-mcp-area-tests <product-name> <area-key>`.
-- Do not use for REST or UI tests — use the API or Playwright skill instead.
+- The product has an area whose stories include MCP surfaces (typically an `MCP` area, but the filter also picks up MCP stories from a mixed-surface area).
+- Invoked via `/defprod-create-mcp-tests <product-name> <area-key>`.
+- Do not use for UI / REST / CLI stories — invoke the matching sibling skill or the `/defprod-create-area-tests` dispatcher.
 
 ## Inputs
 
@@ -57,7 +57,23 @@ This skill consults `.defprod/defprod.json` for optional hints. If absent, the s
 
 If empty, halt and suggest `/defprod-create-area-stories`.
 
-#### 1b. Check for existing tests
+#### 1b. Filter stories by surface (target: `mcp`)
+
+For every story returned by `listUserStories`, determine its **effective surface** before deciding whether it is in scope:
+
+1. If `story.surface` is set explicitly, use that value.
+2. Otherwise, fall back to the story-key prefix mapping from `libs/defprod-common/src/lib/modules/user-story/infer-surface-from-story-key.util.ts`:
+   - `API-…` infers `api`, `MCP-…` infers `mcp`, `CLI-…` infers `cli`. Anything else infers nothing → unspecified.
+3. **In-scope set**: stories whose effective surface is `mcp`.
+4. **Out-of-scope set**: every other story. Log each with one line, then move on:
+   - `Skipped <STORY-KEY> (<title>): surface=<value> (explicit|inferred|unspecified); this skill targets mcp.`
+
+Record the `(explicit|inferred)` tag per in-scope story too — Phase 5c flags inference-routed stories in the coverage summary.
+
+If the in-scope set is empty, halt with:
+> No MCP stories found in this area (no story has surface=mcp, explicit or inferred). Skipping.
+
+#### 1c. Check for existing tests
 
 Look under the MCP test directory. If specs exist for some stories, ask:
 
@@ -185,7 +201,22 @@ Classify each failure as **test fault** (assertion / fixture / SDK usage off —
 
 #### 5c. Present coverage summary
 
-Same table format as the API skill. Flag mismatches between testable AC count and `test()` count. List untestable items + reasons. List any production-gap tags applied.
+| Story | Key | Surface | Total ACs | Testable | `test()` calls | Passing | Status |
+|---|---|---|---:|---:|---:|---:|---|
+| ... | ... | `mcp` *(inferred)* / `mcp` | ... | ... | ... | ... | Pass/Fail |
+
+Mark the **Surface** column with *(inferred)* for any story routed in via inference rather than an explicit `surface` value — those are candidates for a `patchUserStory /surface` backfill.
+
+**Out-of-scope stories** (other surfaces, skipped):
+- `<STORY-KEY>` — `<surface>` (explicit|inferred|unspecified). Use `/defprod-create-<surface>-tests`, or `/defprod-create-area-tests` for an area-wide walk.
+
+Flag mismatches between testable AC count and `test()` count. List untestable items + reasons. List any production-gap tags applied.
+
+Suggest:
+
+> **Next steps:**
+> - Backfill `surface` on any inference-routed stories you want to lock to MCP.
+> - Run `/defprod-run-area-tests <area>` to produce a classified failure report.
 
 ---
 
