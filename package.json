@@ -30,7 +30,8 @@
     "contrib/",
     "known-shipped.json",
     "LICENSE",
-    "README.md"
+    "README.md",
+    "CHANGELOG.md"
   ],
   "scripts": {
     "generate-manifest": "node scripts/generate-manifest.js",

@@ -2,6 +2,8 @@
 
 Agent skills for [DefProd](https://defprod.com) — structured product definitions that AI agents can read, write, and reason about. These skills encode DefProd's opinionated workflows: user story alignment before code, acceptance criteria that drive tests, drift detection between definition and implementation.
 
+**Release notes:** [GitHub Releases](https://github.com/defprod1/defprod-skills/releases) (source of truth) · [`CHANGELOG.md`](./CHANGELOG.md) (mirrors the same content, ships with the package).
+
 ## Compatibility
 
 These skills work with any AI coding tool that discovers skills from `.claude/skills/` in your repository:
