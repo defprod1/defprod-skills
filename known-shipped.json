@@ -8,6 +8,30 @@
     "492785e777ddb1d5f6a22a0ed5a86e3bd23cd2316edef9ba61c22e8abbda2986",
     "a5c053ad032a6d1f70531144b3134611464c85a2caa2e6674e0c3b20a056e779"
   ],
+  "defprod-change-code/SKILL.md": [
+    "7b4868c4e47104a9acf34908ac5379b015540d43ce55b9791f4ea0cf99359261"
+  ],
+  "defprod-change-define/SKILL.md": [
+    "64db1634b00b9a1930a99e101f24473e9af05660b59165d3f6bac1b016e3071d"
+  ],
+  "defprod-change-design/SKILL.md": [
+    "dd33f274e680776ca55b40f2b44ab7f0b121290658cd67a030eef9a8618c5ed4"
+  ],
+  "defprod-change-land/SKILL.md": [
+    "bd0079572ea4d24ced9003c64e7240b369c5a5fc9574283c811b7ac1a1dfb678"
+  ],
+  "defprod-change-review/SKILL.md": [
+    "f07b63142990abe34cfebeb6c58c8f3e81f4b53f09c124a95ac1be084d266c0d"
+  ],
+  "defprod-change-test/SKILL.md": [
+    "a52107523243ee173aa37b6b05af463bfc73cd7ad86458d8a2ca1b5770166912"
+  ],
+  "defprod-change-tracker/SKILL.md": [
+    "e98b1e9ffb4349f8f5d136586ab97bdb4736090924b05412111f020b4168c4d2"
+  ],
+  "defprod-change/SKILL.md": [
+    "7f83a0618f6e30a16ea2d3fd7966a622244643773280bbac58a508254994f777"
+  ],
   "defprod-create-api-tests/SKILL.md": [
     "aee93ef89409ec05dc699e8a2929fa812c1da0f498939014ac9be8d17daaa15e"
   ],
@@ -38,6 +62,7 @@
     "ef644e64b0c27e2d6b226a74aeaca8d2529b8a05265ff007af5ba2b542e3c1e1"
   ],
   "defprod-fix-bug/SKILL.md": [
+    "2f81121e14b6e8bf0fde3b1fee78fe6489f4760732fe29c67d86e0ff09872c13",
     "887f5ab5bd90743f33828c088e91f24c0b02c11d55a18f400f49b656c516259f",
     "f2bb26f49f43fcb35b6d825ceea83823fb7055e578a9a9f175fdb0d2eba355ae"
   ],
@@ -51,7 +76,8 @@
   ],
   "defprod-implement-feature/SKILL.md": [
     "745dd11504be2806630ff29a54b91dc7e01df68067541cdb6ae06a4861d26ffb",
-    "77b49e2df08842df66c74cb3a43ef97f5fd00b35bd7a08770a6c6bd008eb6eed"
+    "77b49e2df08842df66c74cb3a43ef97f5fd00b35bd7a08770a6c6bd008eb6eed",
+    "dd402496536dc41b532adcb08467599eb49ffb36c363a84bdbd0ff67ebe7cce7"
   ],
   "defprod-implement-product/SKILL.md": [
     "8176c835cbe28d551061b0b6fc2051b9c34fbc1a80a3f2316a552508d0cb6b1c"
@@ -68,6 +94,9 @@
     "0dee1cb84584f9dff66a80c03fcbb14bd30059797a5eccb9e0509ddf3ad19e7a",
     "526e6480450f3b25d3174f70b71269eb5ff75bbaa1516625c09ca627c430e7e0",
     "98d1323c4c8b8ab3cbd8747799581b451fa1e7716aab35e72816101843267b5e"
+  ],
+  "defprod-realize-product-from-template/SKILL.md": [
+    "40a99a31fed8751d60156ac68b27e8e4f9a340f71e8309791037cae7297b863a"
   ],
   "defprod-run-area-tests/SKILL.md": [
     "21d04e069875b4801fe3e5b521948f77f2c9e1f109efd1e8248e327618c17066",

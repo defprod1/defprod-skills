@@ -4,11 +4,18 @@ All notable changes to `@defprod/skills` are documented here. The format roughly
 
 The **source of truth for release notes is the [GitHub Releases](https://github.com/defprod1/defprod-skills/releases) page** for this repository. Each entry below mirrors a GitHub Release; click the version heading to read the full body, including any breaking-change upgrade guidance.
 
-## [Unreleased]
+## [1.4.0] — 2026-06-13
 
 ### Added
 
+- The change workflow: `defprod-change` (end-to-end orchestrator with driver-gated stage loop), six self-stamping stage skills (`defprod-change-design/define/code/test/review/land`), and the user-owned `defprod-change-tracker` adapter template (fetch/link/close; installer never overwrites local edits). Requires a DefProd server with change records (Lifecycle v2).
 - `defprod-realize-product-from-template` — realize a new product from a DefProd template end-to-end: copy the template's definition, scaffold a working codebase from the template's linked starter Git repo (running its `bootstrapCommand`), onboard and link the new repo, and verify it builds. Degrades to a definition-only copy when the template has no starter repo bound.
+
+### Changed
+
+- `defprod-implement-feature` and `defprod-fix-bug` are now thin shims that invoke `/defprod-change` with the type preset; their former phase content lives in the stage skills.
+
+See [v1.4.0 release notes](https://github.com/defprod1/defprod-skills/releases/tag/v1.4.0) for the full body.
 
 ## [1.3.1] — 2026-05-26
 
@@ -79,6 +86,7 @@ See [v1.1.0 release notes](https://github.com/defprod1/defprod-skills/releases/t
 
 Initial public release.
 
+[1.4.0]: https://github.com/defprod1/defprod-skills/releases/tag/v1.4.0
 [1.3.1]: https://github.com/defprod1/defprod-skills/releases/tag/v1.3.1
 [1.3.0]: https://github.com/defprod1/defprod-skills/releases/tag/v1.3.0
 [1.2.5]: https://github.com/defprod1/defprod-skills/releases/tag/v1.2.5
