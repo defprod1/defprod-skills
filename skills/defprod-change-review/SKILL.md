@@ -1,0 +1,54 @@
+---
+name: defprod-change-review
+description: Review stage of the change workflow — review the change's diff for correctness, scope fidelity, and convention adherence before it lands. Usually invoked by /defprod-change; works standalone too.
+allowed-tools:
+  - Read
+  - Glob
+  - Grep
+  - Bash
+  - AskUserQuestion
+  - mcp__defprod__getChange
+  - mcp__defprod__getUserStory
+  - mcp__defprod__startChangeStage
+  - mcp__defprod__finishChangeStage
+  - mcp__defprod__cancelChangeStage
+---
+
+# Change Stage: Review
+
+Review the change before it lands. If the repo has its own review skill or
+command (e.g. `/code-review`), prefer it — this skill is the generic fallback
+and the stamping wrapper.
+
+## Change context (stamping preamble)
+
+Resolve the current change context, in precedence order:
+1. `.defprod/change` in the worktree root — JSON `{ productId, changeId, changeKey }`.
+2. A branch named `chg/CHG-NN-*` → resolve via `getChange { productId, key }`.
+3. A `Change: CHG-NN` trailer on the HEAD commit → same resolution.
+
+If a context resolves: call `startChangeStage { changeId, stage: 'review' }`
+before beginning, and `finishChangeStage { changeId, stage: 'review' }` when
+the review passes (findings resolved or accepted). If abandoned mid-stage,
+call `cancelChangeStage`. **If no context resolves, proceed silently.**
+
+## Workflow
+
+1. **Scope the diff**: everything the change touched (uncommitted work and/or
+   the branch diff against the default branch).
+2. **Review against three lenses**:
+   - **Correctness** — logic errors, unhandled edge cases, races, broken error
+     paths, security-relevant mistakes.
+   - **Scope fidelity** — does the diff implement the linked stories'
+     acceptance criteria, the whole criteria, and nothing beyond them?
+   - **Conventions** — style, architecture patterns, naming, and rules the
+     repo defines (read its rules/contributing docs if present).
+3. **Resolve findings**: fix clear-cut defects; raise judgement calls with the
+   user. Re-run the compile check after any fix.
+4. **Verdict**: finish the stage only when no unresolved findings remain.
+
+## Rules
+
+- A review that changes code re-runs the tests it might have invalidated.
+- Findings the user explicitly accepts are recorded in the finish note rather
+  than silently dropped.

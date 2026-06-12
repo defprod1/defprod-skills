@@ -127,6 +127,8 @@ const KNOWN_MCP_TOOLS = [
   'getArchitectureForProduct', 'getArchitectureTree', 'getArea',
   'getBriefForProduct', 'getProduct', 'getRepo', 'getUserStory',
   'listAreas', 'listProducts', 'listRepos', 'listUserStories',
+  'createChange', 'listChanges', 'getChange', 'patchChange', 'deleteChange',
+  'startChangeStage', 'finishChangeStage', 'cancelChangeStage', 'cancelChange', 'reopenChange',
   'moveArchitectureElement',
   'patchArchitectureElement', 'patchArea', 'patchBrief', 'patchProduct', 'patchRepo', 'patchUserStory',
 ];
