@@ -79,6 +79,7 @@ Authored and maintained by the DefProd team.
 |-------|---------|-------|
 | `defprod-onboard-repo` | Discover repo structure, propose product-to-package mapping | Onboarding |
 | `defprod-onboard-product` | Iteratively define product: brief, areas, stories, validation, architecture | Onboarding |
+| `defprod-realize-product-from-template` | Create a product from a template and scaffold its codebase from the template's linked starter Git repo | Onboarding |
 | `defprod-create-definition` | Populate brief + areas from codebase analysis | Onboarding |
 | `defprod-create-area-stories` | Create user stories with acceptance criteria from codebase | Definition |
 | `defprod-implement-feature` | User story alignment, implementation, verification workflow | Development |

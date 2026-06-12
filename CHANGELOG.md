@@ -4,6 +4,12 @@ All notable changes to `@defprod/skills` are documented here. The format roughly
 
 The **source of truth for release notes is the [GitHub Releases](https://github.com/defprod1/defprod-skills/releases) page** for this repository. Each entry below mirrors a GitHub Release; click the version heading to read the full body, including any breaking-change upgrade guidance.
 
+## [Unreleased]
+
+### Added
+
+- `defprod-realize-product-from-template` — realize a new product from a DefProd template end-to-end: copy the template's definition, scaffold a working codebase from the template's linked starter Git repo (running its `bootstrapCommand`), onboard and link the new repo, and verify it builds. Degrades to a definition-only copy when the template has no starter repo bound.
+
 ## [1.3.1] — 2026-05-26
 
 ### Added
