@@ -48,15 +48,20 @@ product's pipeline config says it should.
   default drivers: accept=human; design/define/code/test/review/merge/push=agent;
   build/package/staging/ship=cicd).
 - **Driver** — who executes a stage: `human`, `agent`, or `cicd`. The driver
-  map IS the orchestration policy.
+  map IS the orchestration policy. For stages backed by an agent stage-skill,
+  the orchestrator translates the driver into an execution **mode** it passes to
+  the skill: `agent` → `autonomous` (run to completion, no questions),
+  `human` → `interactive` (clarify as needed, and **never finish the stage
+  without explicit human approval**). `cicd` hands the stage to CI/CD.
 
 ## Workflow
 
 ### Step 1 — Resolve the product
 
-Identify the DefProd product for this repo (`.defprod/defprod.json` hint, or
-`listProducts` + ask the user). Fetch it with `getProduct` and resolve the
-pipeline config as above.
+Identify the DefProd product for this repo: read `productId` from
+`.defprod/defprod.json` (the committed, non-secret config — also the home of
+`apiUrl` and layout hints), else `listProducts` + ask the user. Fetch it with
+`getProduct` and resolve the pipeline config as above.
 
 ### Step 2 — Fetch the ticket (intake)
 
@@ -109,13 +114,22 @@ Repeat until the pipeline ends or control leaves the agent:
    plan the whole run upfront; config and position may have changed.
 2. Determine the next enabled stage after the current position.
    - No next stage → the change is shipped or at pipeline end; go to Step 6.
-3. Consult that stage's **driver**:
-   - **`human`** → STOP. Present the change's position, what the stage needs,
-     and wait for the user's instruction. Do not proceed on your own.
+3. Consult that stage's **driver** and act:
    - **`cicd`** → END the run. Report that the change is handed to the
      CI/CD pipeline (its hooks stamp `finishChangeStage` from here — see
      `defprod-stamp.sh` in defprod-scripts).
-   - **`agent`** → invoke the stage's skill, passing the change type:
+   - **`agent`** or **`human`** on a **skill-backed** stage → invoke the stage's
+     skill, passing the change type **and the mode**: `agent` → `mode=autonomous`,
+     `human` → `mode=interactive`. In interactive mode the skill keeps the human
+     in the loop and will **not** `finishChangeStage` without explicit approval,
+     so a human gate is honoured *inside* the stage — not by stopping the loop
+     before it. (This replaces the earlier "human → stop the loop" rule: the
+     approval-before-finish gate is now the control point. After the stage
+     finishes, continue the loop — re-read the config and consult the next
+     stage's driver.)
+   - **`human`** or **`agent`** on a **skill-less** stage (`build`, `package`,
+     `staging`, `ship` — CI/CD territory) → nothing for the agent to run: hand
+     off as for `cicd`, or STOP and report if a human must act.
 
      | Stage | Skill |
      |-------|-------|
@@ -142,7 +156,10 @@ failed tracker write is reported, never blocking.
 ## Rules
 
 - **Re-consult the driver map every iteration.** A human gate must never be
-  steamrolled because an earlier plan said "continue".
+  steamrolled because an earlier plan said "continue". The gate now lives in
+  the stage skill's **interactive** approval-before-finish, so "continue" means
+  re-reading the next stage's driver and invoking its skill with the right
+  mode — never advancing a `human`-driven stage to `finished` unprompted.
 - **The intent field is the accepted decision** — confirmed by the user, not a
   ticket paste.
 - **Never write lifecycle state via patch** — position moves only through the

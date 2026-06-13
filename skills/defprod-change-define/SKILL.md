@@ -38,6 +38,23 @@ before beginning, and `finishChangeStage { changeId, stage: 'define' }` when
 scope is confirmed. If abandoned mid-stage, call `cancelChangeStage`.
 **If no context resolves, proceed silently.**
 
+## Execution mode (autonomous / interactive)
+
+The orchestrator passes a **mode** derived from this stage's `driver`:
+`agent` → `autonomous`, `human` → `interactive`. Invoked standalone with no
+mode given, default to **interactive**.
+
+- **autonomous** — run the stage end to end without pausing: at each fork take
+  the reasonable default and `finishChangeStage` once the done-condition is met.
+  Surface genuine blockers, never routine choices.
+- **interactive** — keep the human in the loop: ask clarifying questions at real
+  decision points, and **always present the result for explicit approval before
+  `finishChangeStage`**.
+
+Where the workflow below says "confirm with the user" / "present … for
+confirmation" / "ask the user", that is the **interactive** path — in
+**autonomous** mode make the documented default choice and proceed.
+
 ## Workflow — by change type
 
 ### Features & enhancements: user story alignment

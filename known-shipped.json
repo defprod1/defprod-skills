@@ -9,28 +9,35 @@
     "a5c053ad032a6d1f70531144b3134611464c85a2caa2e6674e0c3b20a056e779"
   ],
   "defprod-change-code/SKILL.md": [
-    "7b4868c4e47104a9acf34908ac5379b015540d43ce55b9791f4ea0cf99359261"
+    "7b4868c4e47104a9acf34908ac5379b015540d43ce55b9791f4ea0cf99359261",
+    "82c5dba748c54decfff8343fdda70cc5e68688d1a0b3db42428d96542f5190cc"
   ],
   "defprod-change-define/SKILL.md": [
+    "163a3e3fc02a59db7d5355ae6754128a491850b5bc9c4b11b3db4aa6fd8545fa",
     "64db1634b00b9a1930a99e101f24473e9af05660b59165d3f6bac1b016e3071d"
   ],
   "defprod-change-design/SKILL.md": [
+    "d6ef1a6ef2d6f95952804bc611ae0d294d2d6264eecdda7a3f1308c180bb5336",
     "dd33f274e680776ca55b40f2b44ab7f0b121290658cd67a030eef9a8618c5ed4"
   ],
   "defprod-change-land/SKILL.md": [
+    "52a0700f2d8673fc838b1f8424ce90e616d96df9f6a1775281921528ebc99382",
     "bd0079572ea4d24ced9003c64e7240b369c5a5fc9574283c811b7ac1a1dfb678"
   ],
   "defprod-change-review/SKILL.md": [
+    "858dbd1fc66abab9b4a46dc84d6e79743151d5b63b7e6e6eb786cb1fdd90c6a7",
     "f07b63142990abe34cfebeb6c58c8f3e81f4b53f09c124a95ac1be084d266c0d"
   ],
   "defprod-change-test/SKILL.md": [
-    "a52107523243ee173aa37b6b05af463bfc73cd7ad86458d8a2ca1b5770166912"
+    "a52107523243ee173aa37b6b05af463bfc73cd7ad86458d8a2ca1b5770166912",
+    "c065b443b03aaaf654ca435d4cb78c98f5c39be8976c88d2ee25d80e3cb276c6"
   ],
   "defprod-change-tracker/SKILL.md": [
     "e98b1e9ffb4349f8f5d136586ab97bdb4736090924b05412111f020b4168c4d2"
   ],
   "defprod-change/SKILL.md": [
-    "7f83a0618f6e30a16ea2d3fd7966a622244643773280bbac58a508254994f777"
+    "7f83a0618f6e30a16ea2d3fd7966a622244643773280bbac58a508254994f777",
+    "b1f1bd0fd505a556b5b5d0de19fb26f6e1349d5e6dd7d3ef172a58ae7400fb46"
   ],
   "defprod-create-api-tests/SKILL.md": [
     "aee93ef89409ec05dc699e8a2929fa812c1da0f498939014ac9be8d17daaa15e"
@@ -60,6 +67,9 @@
   ],
   "defprod-create-ui-tests/SKILL.md": [
     "ef644e64b0c27e2d6b226a74aeaca8d2529b8a05265ff007af5ba2b542e3c1e1"
+  ],
+  "defprod-exhaustive-discussion/SKILL.md": [
+    "5566362ce6b54fbafb7ebba892c1fa99b2188b6b6d55ac954e6ad5c1c52c2117"
   ],
   "defprod-fix-bug/SKILL.md": [
     "2f81121e14b6e8bf0fde3b1fee78fe6489f4760732fe29c67d86e0ff09872c13",
