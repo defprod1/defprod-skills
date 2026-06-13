@@ -25,6 +25,12 @@ Resolve the current change context, in precedence order:
 2. A branch named `chg/CHG-NN-*` → resolve via `getChange { productId, key }`.
 3. A `Change: CHG-NN` trailer on the HEAD commit → same resolution.
 
+**A resolved carrier is a hint, not proof — validate it.** `getChange` the key
+and confirm the change is live: if it is **shipped (frozen)** or **cancelled**,
+the carrier is stale (a prior change left un-cleared). Disregard it — deleting a
+stale `.defprod/change` file — and proceed as **no-context**. Only an *active*
+change is a live context to stamp.
+
 This stage handles **two pipeline stages** — `merge` and `push` — stamping
 whichever of them are enabled in the product's pipeline. **If no context
 resolves, proceed silently** (commit/push without stamping or trailer).
@@ -41,9 +47,13 @@ mode given, default to **interactive**.
 - **interactive** — keep the human in the loop: ask when the landing flow is
   ambiguous, and present before finishing.
 
-Mode does **not** override the consent rule below: pushing or merging always
-requires the repo's *standing consent* (rule 3) regardless of mode — autonomous
-without standing consent commits and stops.
+**Merge/push consent follows the driver** (D14/D26). A stage's `driver` *is* the
+durable consent signal: an `agent`-driven merge/push (→ **autonomous**) is
+standing consent — merge/push **without prompting**. A `human`-driven merge/push
+(→ **interactive**) makes the human the consent point — confirm before you merge
+or push. Re-asking on an `agent` stage contradicts the config; honour it. Only
+when run with **no driver context** (standalone, consent genuinely unknown) do
+you default to committing and stopping.
 
 ## Workflow
 
@@ -78,8 +88,23 @@ without standing consent commits and stops.
    Only stamp stages that are enabled — a disabled stage is rejected by the
    server; treat that as "not my pipeline's stage", not an error.
 
-3. **Never push or merge without the user's standing consent** for this repo's
-   flow — when in doubt, stop after the commit and report.
+3. **Merge/push consent = the stage driver** (D14/D26). `agent` (autonomous) →
+   merge/push **without prompting** (the driver config is the standing consent);
+   `human` (interactive) → confirm first. With **no driver context** (standalone,
+   consent unknown), stop after the commit and report. Never assume consent you
+   were given by neither config nor a human.
+
+4. **Clear the worktree pin on hand-off.** Once your landing actions have
+   succeeded — the push to origin (trunk flow: the deployable branch; branch/PR
+   flow: the change branch, with the PR handed off) or a merge you performed —
+   and the change is handed to CI/CD or the platform, **delete
+   `.defprod/change`** — the worktree's hands-on role is over. The remaining
+   stages (`build`/`package`/`staging`/`ship`) are stamped by CI/CD via the
+   commit **trailer** deploy range (D24), never via the pin, so nothing
+   downstream needs it. This preserves the invariant *pin present ⇔ a change is
+   hands-on in this worktree* and frees the worktree for the next change without
+   waiting for `ship`. If you only committed and **stopped** for consent (no
+   push/merge performed), that is **not** a hand-off — leave the pin.
 
 ## Rules
 

@@ -99,6 +99,8 @@ Make the change discoverable by stage skills and CI hooks:
 1. Write **`.defprod/change`** (git-ignored; add to `.gitignore` if needed) in
    the worktree root:
    `{ "productId": "...", "changeId": "...", "changeKey": "CHG-NN" }`
+   Overwrite any existing pin — the new change now owns the worktree; a leftover
+   pin from a shipped/cancelled change is stale and is replaced here.
 2. In branch-based flows, create the branch **`chg/CHG-NN-<short-slug>`**.
 3. (Commits made later by `/defprod-change-land` carry the
    `Change: CHG-NN` trailer.)
@@ -153,6 +155,10 @@ When the change reaches `ship` finished (or is cancelled), ask the adapter to
 write the outcome back to the ticket (`close` operation). Best-effort: a
 failed tracker write is reported, never blocking.
 
+On cancellation (`cancelChange`), also **delete `.defprod/change`** — a
+cancelled change is no longer hands-on in the worktree. (On `ship`, the pin was
+already cleared at the land hand-off, Step 5 / `change-land`.)
+
 ## Rules
 
 - **Re-consult the driver map every iteration.** A human gate must never be
@@ -165,6 +171,10 @@ failed tracker write is reported, never blocking.
 - **Never write lifecycle state via patch** — position moves only through the
   stage-action tools.
 - **One change at a time per worktree** — `.defprod/change` pins it; parallel
-  changes belong in separate worktrees or branches.
+  changes belong in separate worktrees or branches. The pin is cleared at the
+  land hand-off and on cancel, and stage skills **self-heal** a stale pin on
+  read (validate the pinned change is active; delete it if shipped/cancelled),
+  so a leftover pin never traps the next change. Invariant: *pin present ⇔ a
+  change is hands-on in this worktree*.
 - Mid-flight tracker sync is out of scope: DefProd is the source of truth
   between the link and close bookends.

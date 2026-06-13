@@ -27,6 +27,12 @@ Resolve the current change context, in precedence order:
 2. A branch named `chg/CHG-NN-*` → resolve via `getChange { productId, key }`.
 3. A `Change: CHG-NN` trailer on the HEAD commit → same resolution.
 
+**A resolved carrier is a hint, not proof — validate it.** `getChange` the key
+and confirm the change is live: if it is **shipped (frozen)** or **cancelled**,
+the carrier is stale (a prior change left un-cleared). Disregard it — deleting a
+stale `.defprod/change` file — and proceed as **no-context**. Only an *active*
+change is a live context to stamp.
+
 If a context resolves: call `startChangeStage { changeId, stage: 'review' }`
 before beginning, and `finishChangeStage { changeId, stage: 'review' }` when
 the review passes (findings resolved or accepted). If abandoned mid-stage,
