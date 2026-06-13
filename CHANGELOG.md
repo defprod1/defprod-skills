@@ -4,6 +4,19 @@ All notable changes to `@defprod/skills` are documented here. The format roughly
 
 The **source of truth for release notes is the [GitHub Releases](https://github.com/defprod1/defprod-skills/releases) page** for this repository. Each entry below mirrors a GitHub Release; click the version heading to read the full body, including any breaking-change upgrade guidance.
 
+## [1.5.0] — 2026-06-13
+
+### Added
+
+- `defprod-exhaustive-discussion` — a structured, high-rigor design review that walks each branch of a design decision tree in dependency order. The `defprod-change-design` stage escalates to it for large or ambiguous changes.
+
+### Changed
+
+- All change stage skills (`design`, `define`, `code`, `test`, `review`, `land`) gain an explicit `autonomous` / `interactive` execution mode derived from the stage's pipeline driver.
+- `defprod-change-land` stamps the `merge`/`push` stage start before the operation and finish after it succeeds (both sides), superseding the finish-only shortcut.
+
+See [v1.5.0 release notes](https://github.com/defprod1/defprod-skills/releases/tag/v1.5.0) for the full body.
+
 ## [1.4.0] — 2026-06-13
 
 ### Added
@@ -86,6 +99,7 @@ See [v1.1.0 release notes](https://github.com/defprod1/defprod-skills/releases/t
 
 Initial public release.
 
+[1.5.0]: https://github.com/defprod1/defprod-skills/releases/tag/v1.5.0
 [1.4.0]: https://github.com/defprod1/defprod-skills/releases/tag/v1.4.0
 [1.3.1]: https://github.com/defprod1/defprod-skills/releases/tag/v1.3.1
 [1.3.0]: https://github.com/defprod1/defprod-skills/releases/tag/v1.3.0
