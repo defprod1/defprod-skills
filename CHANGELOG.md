@@ -4,6 +4,22 @@ All notable changes to `@defprod/skills` are documented here. The format roughly
 
 The **source of truth for release notes is the [GitHub Releases](https://github.com/defprod1/defprod-skills/releases) page** for this repository. Each entry below mirrors a GitHub Release; click the version heading to read the full body, including any breaking-change upgrade guidance.
 
+## [1.6.0] — 2026-06-14
+
+### Added
+
+- `defprod-untracked-change` — the front door for *recordless* work (ADR0004): quality-gated (code/test/review/land, reusing the stage skills context-free) but with no change record, no stamping, and no `Change:` trailer. Escalates to `defprod-change` the moment a design decision, a definition change, or a trackable decision appears.
+
+### Changed
+
+- `defprod-change-land` honours the stage's pipeline `driver` for merge/push consent: an `agent`/`autonomous` stage proceeds without prompting (the driver config is the standing consent); a `human`/`interactive` stage confirms first. Replaces the blanket consent prompt that overrode the `agent` driver.
+
+### Fixed
+
+- The `.defprod/change` change-context carrier is now self-healing: every stage skill validates a resolved carrier and treats a shipped/cancelled pin as no-context (deleting it); `defprod-change-land` clears the pin at hand-off; the orchestrator clears it on cancel and overwrites a stale pin. Stale pins no longer trip later runs.
+
+See [v1.6.0 release notes](https://github.com/defprod1/defprod-skills/releases/tag/v1.6.0) for the full body.
+
 ## [1.5.0] — 2026-06-13
 
 ### Added
@@ -99,6 +115,7 @@ See [v1.1.0 release notes](https://github.com/defprod1/defprod-skills/releases/t
 
 Initial public release.
 
+[1.6.0]: https://github.com/defprod1/defprod-skills/releases/tag/v1.6.0
 [1.5.0]: https://github.com/defprod1/defprod-skills/releases/tag/v1.5.0
 [1.4.0]: https://github.com/defprod1/defprod-skills/releases/tag/v1.4.0
 [1.3.1]: https://github.com/defprod1/defprod-skills/releases/tag/v1.3.1
