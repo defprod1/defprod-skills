@@ -4,6 +4,14 @@ All notable changes to `@defprod/skills` are documented here. The format roughly
 
 The **source of truth for release notes is the [GitHub Releases](https://github.com/defprod1/defprod-skills/releases) page** for this repository. Each entry below mirrors a GitHub Release; click the version heading to read the full body, including any breaking-change upgrade guidance.
 
+## [1.6.1] — 2026-06-16
+
+### Changed
+
+- `defprod-change-review` is now self-sufficient and agent-portable: removed the deference to a host-specific review command (e.g. `/code-review`) as its primary path, so the same review runs on any host. Added a context-gathering step (repo rules + git history/blame) and a single-pass confidence-scoring step (score each finding 0–100, discard below 80) to ground findings and cut false positives.
+
+See [v1.6.1 release notes](https://github.com/defprod1/defprod-skills/releases/tag/v1.6.1) for the full body.
+
 ## [1.6.0] — 2026-06-14
 
 ### Added
@@ -115,6 +123,7 @@ See [v1.1.0 release notes](https://github.com/defprod1/defprod-skills/releases/t
 
 Initial public release.
 
+[1.6.1]: https://github.com/defprod1/defprod-skills/releases/tag/v1.6.1
 [1.6.0]: https://github.com/defprod1/defprod-skills/releases/tag/v1.6.0
 [1.5.0]: https://github.com/defprod1/defprod-skills/releases/tag/v1.5.0
 [1.4.0]: https://github.com/defprod1/defprod-skills/releases/tag/v1.4.0
