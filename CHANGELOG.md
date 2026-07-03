@@ -4,6 +4,18 @@ All notable changes to `@defprod/skills` are documented here. The format roughly
 
 The **source of truth for release notes is the [GitHub Releases](https://github.com/defprod1/defprod-skills/releases) page** for this repository. Each entry below mirrors a GitHub Release; click the version heading to read the full body, including any breaking-change upgrade guidance.
 
+## [1.7.0] — 2026-07-03
+
+### Added
+
+- Product-scoped change selection for monorepos. `defprod-change` resolves the target product via the repo↔product linkage (`.defprod/defprod.json` `repoId` → products by `repoId` → `repoPackagePath` → changed-files' route/area → ask), keeping a single `productId` as the single-product fast path.
+
+### Changed
+
+- `defprod-change-land` writes the product-scoped commit trailer `Change: <product-slug>/CHG-NN` (was `Change: CHG-NN`); the `.defprod/change` pin now carries `productSlug`. All stage skills still tolerate the legacy bare `Change: CHG-NN` on existing history. Requires `@defprod/scripts` ≥ 1.3.0 to resolve the slug in CI. Builds on DefProd CORE-42.
+
+See [v1.7.0 release notes](https://github.com/defprod1/defprod-skills/releases/tag/v1.7.0) for the full body.
+
 ## [1.6.1] — 2026-06-16
 
 ### Changed
@@ -123,6 +135,7 @@ See [v1.1.0 release notes](https://github.com/defprod1/defprod-skills/releases/t
 
 Initial public release.
 
+[1.7.0]: https://github.com/defprod1/defprod-skills/releases/tag/v1.7.0
 [1.6.1]: https://github.com/defprod1/defprod-skills/releases/tag/v1.6.1
 [1.6.0]: https://github.com/defprod1/defprod-skills/releases/tag/v1.6.0
 [1.5.0]: https://github.com/defprod1/defprod-skills/releases/tag/v1.5.0
