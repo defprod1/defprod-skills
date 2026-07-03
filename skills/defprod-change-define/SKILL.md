@@ -29,9 +29,11 @@ that this change implements, linked onto the change record.
 ## Change context (stamping preamble)
 
 Resolve the current change context, in precedence order:
-1. `.defprod/change` in the worktree root — JSON `{ productId, changeId, changeKey }`.
+1. `.defprod/change` in the worktree root — JSON `{ productId, changeId, changeKey, productSlug }`.
 2. A branch named `chg/CHG-NN-*` → resolve via `getChange { productId, key }`.
-3. A `Change: CHG-NN` trailer on the HEAD commit → same resolution.
+3. A `Change: <product-slug>/CHG-NN` trailer on the HEAD commit → resolve the slug
+   to a product, then `getChange { productId, key }` (tolerate a legacy bare
+   `Change: CHG-NN` on older history, resolved with the pinned productId).
 
 **A resolved carrier is a hint, not proof — validate it.** `getChange` the key
 and confirm the change is live: if it is **shipped (frozen)** or **cancelled**,

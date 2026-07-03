@@ -58,10 +58,27 @@ product's pipeline config says it should.
 
 ### Step 1 — Resolve the product
 
-Identify the DefProd product for this repo: read `productId` from
-`.defprod/defprod.json` (the committed, non-secret config — also the home of
-`apiUrl` and layout hints), else `listProducts` + ask the user. Fetch it with
-`getProduct` and resolve the pipeline config as above.
+Identify the DefProd product for this repo. One repo may host **several**
+products (a monorepo), so resolve by this ladder — first match wins:
+
+1. **Config fast path.** Read `.defprod/defprod.json` (the committed, non-secret
+   config — also the home of `apiUrl`, `repoId`, and layout hints). If it pins a
+   single `productId`, use it — the common single-product case, unchanged.
+2. **Repo linkage.** Otherwise take `repoId` from the config and list the team's
+   products (`listProducts`), keeping those whose `repoId` matches. This is the
+   repo↔product linkage — the product carries its own `repoId`/`repoPackagePath`.
+   - Exactly one candidate → use it.
+3. **Narrow by package path.** More than one → narrow by `repoPackagePath`:
+   keep candidates whose path is the sub-tree the change's files live under.
+4. **Narrow by working area.** Still ambiguous (two products share a
+   `repoPackagePath` — e.g. two apps served from one package) → narrow by the
+   route/area the changed files belong to.
+5. **Ask.** Still ambiguous, or no `repoId`/candidates at all → `listProducts`
+   and ask the user, presenting candidates by **slug** and name.
+
+Fetch the resolved product with `getProduct`, **note its `slug`** (carried into
+the change context in Step 4 for the land trailer), and resolve the pipeline
+config as above.
 
 ### Step 2 — Fetch the ticket (intake)
 
@@ -98,12 +115,14 @@ Make the change discoverable by stage skills and CI hooks:
 
 1. Write **`.defprod/change`** (git-ignored; add to `.gitignore` if needed) in
    the worktree root:
-   `{ "productId": "...", "changeId": "...", "changeKey": "CHG-NN" }`
+   `{ "productId": "...", "changeId": "...", "changeKey": "CHG-NN", "productSlug": "..." }`
+   (`productSlug` is the resolved product's slug from Step 1 — the land stage
+   uses it for the `Change: <slug>/CHG-NN` trailer without a round-trip.)
    Overwrite any existing pin — the new change now owns the worktree; a leftover
    pin from a shipped/cancelled change is stale and is replaced here.
 2. In branch-based flows, create the branch **`chg/CHG-NN-<short-slug>`**.
 3. (Commits made later by `/defprod-change-land` carry the
-   `Change: CHG-NN` trailer.)
+   `Change: <product-slug>/CHG-NN` trailer.)
 
 Then perform the **link write-back**: ask the adapter to mark the ticket
 promoted with the change key (`link` operation).

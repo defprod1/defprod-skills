@@ -21,9 +21,12 @@ trailer that CI/CD hooks use to stamp the remaining pipeline stages.
 ## Change context (stamping preamble)
 
 Resolve the current change context, in precedence order:
-1. `.defprod/change` in the worktree root — JSON `{ productId, changeId, changeKey }`.
+1. `.defprod/change` in the worktree root — JSON `{ productId, changeId, changeKey, productSlug }`.
 2. A branch named `chg/CHG-NN-*` → resolve via `getChange { productId, key }`.
-3. A `Change: CHG-NN` trailer on the HEAD commit → same resolution.
+3. A `Change: <product-slug>/CHG-NN` trailer on the HEAD commit → resolve the
+   slug to a product, then `getChange { productId, key }`. Tolerate a legacy
+   bare `Change: CHG-NN` (no slug) on pre-existing history — resolve it with the
+   pinned/known productId.
 
 **A resolved carrier is a hint, not proof — validate it.** `getChange` the key
 and confirm the change is live: if it is **shipped (frozen)** or **cancelled**,
@@ -61,11 +64,15 @@ you default to committing and stopping.
    conventions, and append the correlation trailer as the final line:
 
    ```
-   Change: CHG-NN
+   Change: <product-slug>/CHG-NN
    ```
 
-   Every commit belonging to the change carries it — it survives squashes and
-   cherry-picks and is how CI resolves the change from a push range.
+   The slug is the change's owning product slug — take it from `productSlug` in
+   the `.defprod/change` pin (or `getProduct(productId).slug`). It makes the
+   trailer product-scoped so CI can resolve the right product in a multi-product
+   monorepo (a bare `CHG-NN` key is only unique *within* a product). Every commit
+   belonging to the change carries it — it survives squashes and cherry-picks and
+   is how CI resolves the change from a push range.
 
 2. **Land per the repo's flow** — ask the user if ambiguous. For every merge or
    push **you** perform, stamp the matching stage on **both sides** of the
