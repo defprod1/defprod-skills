@@ -1,6 +1,6 @@
 ---
 name: defprod-change-review
-description: Review stage of the change workflow — review the change's diff for correctness, scope fidelity, and convention adherence before it lands. Usually invoked by /defprod-change; works standalone too.
+description: Review stage of the change workflow — review the change's diff for correctness, security, test coverage, scope fidelity, and convention adherence before it lands. Usually invoked by /defprod-change; works standalone too.
 allowed-tools:
   - Read
   - Glob
@@ -24,7 +24,10 @@ not just hosts that ship a built-in review command.
 If your host has a richer native review command (e.g. `/code-review`) and you
 are reviewing on a surface it fits — a GitHub pull request, say — you may prefer
 it there. But for the DefProd change-record flow (diff-based, no pull request
-required) this skill is the primary path, not a fallback.
+required) this skill is the primary path, not a fallback. If you do lean on such
+a reviewer, treat it as an engine for the correctness lens only — the
+scope-fidelity lens, the confidence pass, severity ranking, and DefProd stamping
+stay this skill's responsibility regardless of host.
 
 ## Change context (stamping preamble)
 
@@ -69,18 +72,39 @@ proceed, recording accepted judgement calls in the finish note.
    the branch diff against the default branch).
 2. **Gather context** before judging the lines in isolation — this is what
    keeps findings grounded and cuts false positives:
-   - **Repo rules** — read the rules/contributing docs the repo defines for the
-     touched surfaces, so convention findings cite an actual written rule.
+   - **Repo rules & known traps** — read the rules/contributing docs the repo
+     defines for the touched surfaces, so convention findings cite an actual
+     written rule. Many repos also document their own *recurring* pitfalls (a
+     gotchas / known-traps doc, or a rule marked blocking); consult those and
+     check the diff against them.
+   - **Callers & tests** — identify the callers of any changed function or
+     interface, and the existing tests over the changed region. A change is
+     only safe in the context of who depends on it and what covers it.
    - **Git history** — `git log`/`git blame` the modified regions. A line that
      looks wrong in isolation is often a deliberate prior fix; conversely the
      history can reveal a re-introduced regression.
-3. **Review against three lenses**:
-   - **Correctness** — logic errors, unhandled edge cases, races, broken error
-     paths, security-relevant mistakes.
+3. **Review against these lenses** — judge only what the diff changed (the
+   confidence pass below drops the rest):
+   - **Correctness & regressions** — logic errors, unhandled edge cases, races,
+     broken error paths; and silent behaviour changes for existing callers:
+     changed return types / shapes / nullability, altered persistence or
+     propagation, breaking changes to a published contract or response shape.
+   - **Error handling & resilience** — null / undefined and otherwise
+     unexpected inputs; failures from external or dependency calls handled
+     rather than swallowed; async rejections caught; batch operations that
+     shouldn't abort wholesale when a single item fails.
+   - **Security** — input validation and sanitisation; authorization and
+     access-scoping; multi-tenant / data isolation; secrets kept out of logs
+     and commits; injection-prone sinks.
+   - **Test coverage** — what covers the changed paths; new branches and edge
+     cases tested; existing tests still *valid* (not merely still passing)
+     after a refactor. Report a missing test as a finding — say what to test
+     and where it would live.
    - **Scope fidelity** — does the diff implement the linked stories'
      acceptance criteria, the whole criteria, and nothing beyond them?
-   - **Conventions** — style, architecture patterns, naming, and rules the
-     repo defines (from the context gathered in step 2).
+   - **Conventions & standards** — style, architecture patterns, naming, and
+     rules the repo defines (cite the written rule); plus type-safety escape
+     hatches a typechecker won't flag (e.g. a cast that suppresses an error).
 4. **Score each finding for confidence (single pass)** — for every candidate
    finding, assign a 0–100 confidence that it is a *real, change-introduced*
    issue, then **discard anything below 80**. Score down (and drop) findings
@@ -93,10 +117,18 @@ proceed, recording accepted judgement calls in the finish note.
    - silenced deliberately in-code (e.g. a lint-ignore with a reason).
    For a convention finding, confirm the repo rule actually names the issue
    before keeping it. The goal is a short list of high-confidence findings, not
-   exhaustive nitpicking.
-5. **Resolve the surviving findings**: fix clear-cut defects; raise judgement
-   calls with the user. Re-run the compile check after any fix.
-6. **Verdict**: finish the stage only when no unresolved findings remain.
+   exhaustive nitpicking. Confidence (is it real?) is orthogonal to severity
+   (how bad?) — score both.
+5. **Rank and resolve the survivors** — tag each by severity: **blocking**
+   (data loss, broken behaviour, security holes, crashes), **important**
+   (behaviour regressions, missing error handling, test gaps for changed
+   logic), or **minor** (style, docs, small cleanups); never file a nitpick as
+   blocking. State each as location (`file:line`), what's wrong, why it matters
+   (the concrete consequence), and the fix. Fix clear-cut defects; raise
+   judgement calls with the user. Re-run the compile check after any fix.
+6. **Verdict**: finish the stage only when no **blocking** or **important**
+   finding is unresolved; minor findings may be accepted and recorded in the
+   finish note.
 
 ## Rules
 

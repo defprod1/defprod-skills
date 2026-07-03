@@ -4,6 +4,14 @@ All notable changes to `@defprod/skills` are documented here. The format roughly
 
 The **source of truth for release notes is the [GitHub Releases](https://github.com/defprod1/defprod-skills/releases) page** for this repository. Each entry below mirrors a GitHub Release; click the version heading to read the full body, including any breaking-change upgrade guidance.
 
+## [1.8.0] — 2026-07-04
+
+### Changed
+
+- `defprod-change-review` now reviews against a fuller, still repo-agnostic set of lenses — **correctness & regressions** (incl. silent behaviour changes for existing callers: return shape/nullability, breaking contract/response shapes), **error handling & resilience**, **security** (authz/access-scoping, multi-tenant isolation, input validation, secrets, injection), **test coverage** (report gaps as findings), **scope fidelity**, and **conventions & standards** (incl. type-safety escape hatches a typechecker won't flag). Context-gathering gains a **callers & tests** step and a **known-traps** prompt (consult a repo's own recurring-pitfalls docs). Findings now carry a **severity** (blocking / important / minor) and a `file:line` / what / why / fix shape, orthogonal to the existing confidence pass; the stage finishes when no blocking or important finding is unresolved. No new host-specific tooling — the skill stays self-sufficient and portable.
+
+See [v1.8.0 release notes](https://github.com/defprod1/defprod-skills/releases/tag/v1.8.0) for the full body.
+
 ## [1.7.0] — 2026-07-03
 
 ### Added
