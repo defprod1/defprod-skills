@@ -4,6 +4,14 @@ All notable changes to `@defprod/skills` are documented here. The format roughly
 
 The **source of truth for release notes is the [GitHub Releases](https://github.com/defprod1/defprod-skills/releases) page** for this repository. Each entry below mirrors a GitHub Release; click the version heading to read the full body, including any breaking-change upgrade guidance.
 
+## [1.9.0] — 2026-07-05
+
+### Added
+
+- **Local skill customization via `SKILL.local.md`.** Every shipped `SKILL.md` now points to an optional `SKILL.local.md` companion in the same directory; the agent reads it and folds it in, with local content taking precedence on conflict. This lets you customize a skill **without editing (and freezing) the shipped file** — the shipped `SKILL.md` stays pristine and keeps receiving updates, while `SKILL.local.md` is never touched by `install`/`update` and never enters the lock. Both commands report which installed skills have one, and `verify` asserts every shipped skill carries the pointer. See the "Customizing a skill locally" section of the README.
+
+See [v1.9.0 release notes](https://github.com/defprod1/defprod-skills/releases/tag/v1.9.0) for the full body.
+
 ## [1.8.0] — 2026-07-04
 
 ### Changed
@@ -143,6 +151,8 @@ See [v1.1.0 release notes](https://github.com/defprod1/defprod-skills/releases/t
 
 Initial public release.
 
+[1.9.0]: https://github.com/defprod1/defprod-skills/releases/tag/v1.9.0
+[1.8.0]: https://github.com/defprod1/defprod-skills/releases/tag/v1.8.0
 [1.7.0]: https://github.com/defprod1/defprod-skills/releases/tag/v1.7.0
 [1.6.1]: https://github.com/defprod1/defprod-skills/releases/tag/v1.6.1
 [1.6.0]: https://github.com/defprod1/defprod-skills/releases/tag/v1.6.0
