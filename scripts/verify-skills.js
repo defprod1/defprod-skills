@@ -243,9 +243,30 @@ if (!fs.existsSync(RETIRED_PATH)) {
   }
 }
 
-// --- 6. Installer smoke test ---
+// --- 6. Local-extensions pointer block ---
 
-console.log('\n6. Installer smoke test');
+// Every official SKILL.md must advertise the SKILL.local.md companion so consumers
+// can customise a skill without forking it (see the local-customization design).
+// Keep this sentinel in sync with the block inserted into each skill.
+const LOCAL_POINTER_SENTINEL = '> **Local extensions.**';
+
+console.log('\n6. Local-extensions pointer block');
+
+for (const dir of skillDirs) {
+  const skillFile = path.join(SKILLS_DIR, dir, 'SKILL.md');
+  if (!fs.existsSync(skillFile)) continue;
+
+  const content = fs.readFileSync(skillFile, 'utf8');
+  if (!content.includes(LOCAL_POINTER_SENTINEL) || !content.includes('SKILL.local.md')) {
+    fail(`${dir}/SKILL.md — missing the "Local extensions" pointer block (must reference SKILL.local.md)`);
+  } else {
+    pass(`${dir}/SKILL.md — local-extensions pointer present`);
+  }
+}
+
+// --- 7. Installer smoke test ---
+
+console.log('\n7. Installer smoke test');
 
 const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'defprod-skills-test-'));
 

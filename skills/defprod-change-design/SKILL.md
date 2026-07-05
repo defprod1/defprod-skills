@@ -16,6 +16,11 @@ allowed-tools:
   - mcp__defprod__cancelChangeStage
 ---
 
+> **Local extensions.** If a file named `SKILL.local.md` exists in this skill's
+> directory, read it now and fold it into the steps below. It records this
+> installation's local policies, additions, and overrides; where it conflicts
+> with the instructions here, the local file takes precedence.
+
 # Change Stage: Design
 
 Produce the design for a change — the *how* behind the intent's *what & why* —

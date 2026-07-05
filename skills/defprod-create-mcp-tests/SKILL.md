@@ -15,6 +15,11 @@ allowed-tools:
   - mcp__defprod__getUserStory
 ---
 
+> **Local extensions.** If a file named `SKILL.local.md` exists in this skill's
+> directory, read it now and fold it into the steps below. It records this
+> installation's local policies, additions, and overrides; where it conflicts
+> with the instructions here, the local file takes precedence.
+
 # Create MCP Tests
 
 Generates MCP integration tests for the stories in a product area whose surface is `mcp` — either set explicitly via `UserStory.surface = 'mcp'`, or inferred from the `MCP-…` story-key prefix when `surface` is unset. Each in-scope story gets its own test file with one `test()` per acceptance criterion. The harness uses the official `@modelcontextprotocol/sdk` client connected over the streamable-HTTP `/mcp` endpoint (and the SSE `/mcp/sse` + `/mcp/messages` endpoints when the story explicitly requires SSE). Stories on other surfaces are skipped with a one-line log entry — invoke the matching sibling skill, or `/defprod-create-area-tests` (the surface-aware dispatcher) for an end-to-end area walk.

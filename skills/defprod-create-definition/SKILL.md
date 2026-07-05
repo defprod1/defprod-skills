@@ -16,6 +16,11 @@ allowed-tools:
   - mcp__defprod__createArea
 ---
 
+> **Local extensions.** If a file named `SKILL.local.md` exists in this skill's
+> directory, read it now and fold it into the steps below. It records this
+> installation's local policies, additions, and overrides; where it conflicts
+> with the instructions here, the local file takes precedence.
+
 # Create Definition
 
 Populates an existing DefProd product's brief and areas by analysing the project's documentation and codebase. This is a focused skill that handles only brief + areas — use `/defprod-create-area-stories` afterwards to populate user stories.

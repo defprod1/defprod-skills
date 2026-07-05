@@ -19,6 +19,11 @@ allowed-tools:
   - mcp__defprod__getBriefForProduct
 ---
 
+> **Local extensions.** If a file named `SKILL.local.md` exists in this skill's
+> directory, read it now and fold it into the steps below. It records this
+> installation's local policies, additions, and overrides; where it conflicts
+> with the instructions here, the local file takes precedence.
+
 # Create Area Stories
 
 Creates comprehensive user stories with acceptance criteria for a single product area by deep-diving the relevant source code, routes, tests, and documentation. Each story describes an existing, implemented capability.

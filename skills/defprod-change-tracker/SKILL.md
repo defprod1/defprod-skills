@@ -9,6 +9,11 @@ allowed-tools:
   - WebFetch
 ---
 
+> **Local extensions.** If a file named `SKILL.local.md` exists in this skill's
+> directory, read it now and fold it into the steps below. It records this
+> installation's local policies, additions, and overrides; where it conflicts
+> with the instructions here, the local file takes precedence.
+
 # Change Tracker Adapter (fill me in)
 
 `/defprod-change` is tracker-agnostic. This skill is the seam: it defines the

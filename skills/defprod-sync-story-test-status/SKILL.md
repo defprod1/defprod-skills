@@ -7,6 +7,11 @@ allowed-tools:
   - AskUserQuestion
 ---
 
+> **Local extensions.** If a file named `SKILL.local.md` exists in this skill's
+> directory, read it now and fold it into the steps below. It records this
+> installation's local policies, additions, and overrides; where it conflicts
+> with the instructions here, the local file takes precedence.
+
 # Sync Story Test Status
 
 Runs `scripts/sync-story-test-status.sh` (shipped separately in the `@defprod/scripts` package, or copied into your repo's `scripts/` directory) so the live DefProd product reflects the current state of your test suites — covered vs. uncovered stories, and pass/fail/flaky results for each covered story.

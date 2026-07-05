@@ -16,6 +16,11 @@ allowed-tools:
   - mcp__defprod__getBriefForProduct
 ---
 
+> **Local extensions.** If a file named `SKILL.local.md` exists in this skill's
+> directory, read it now and fold it into the steps below. It records this
+> installation's local policies, additions, and overrides; where it conflicts
+> with the instructions here, the local file takes precedence.
+
 # Create Area Tests (Dispatcher)
 
 Routes test generation for every story in a product area to the right per-surface sibling skill. This skill does **not** generate tests itself — it inspects each story's `surface` (explicit or inferred), groups stories by surface, presents the routing plan to the user, and on confirmation invokes the matching `defprod-create-<surface>-tests` skill once per surface group.

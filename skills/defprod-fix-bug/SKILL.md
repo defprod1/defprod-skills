@@ -9,6 +9,11 @@ allowed-tools:
   - AskUserQuestion
 ---
 
+> **Local extensions.** If a file named `SKILL.local.md` exists in this skill's
+> directory, read it now and fold it into the steps below. It records this
+> installation's local policies, additions, and overrides; where it conflicts
+> with the instructions here, the local file takes precedence.
+
 # Fix Bug (shim)
 
 This skill is now a thin entry point onto the change workflow. The full bug

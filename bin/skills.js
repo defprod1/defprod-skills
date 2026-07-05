@@ -250,6 +250,19 @@ function pruneRetiredSkills(skillsDir, lock, shipped, stats) {
   }
 }
 
+function reportLocalAddenda(skillsDir) {
+  if (!fs.existsSync(skillsDir)) return;
+  const withLocal = fs.readdirSync(skillsDir, { withFileTypes: true })
+    .filter(e => e.isDirectory() && fs.existsSync(path.join(skillsDir, e.name, 'SKILL.local.md')))
+    .map(e => e.name)
+    .sort();
+  if (withLocal.length === 0) return;
+  console.log(`\nLocal addenda (SKILL.local.md — read by the skill, preserved across updates):`);
+  for (const name of withLocal) {
+    console.log(`  ${name}/`);
+  }
+}
+
 function install(targetDir, contribNames, args) {
   const skillsDir = resolveSkillsDir(targetDir, args);
   fs.mkdirSync(skillsDir, { recursive: true });
@@ -304,6 +317,8 @@ function install(targetDir, contribNames, args) {
   warnRetiredOnInstall(skillsDir);
 
   saveLock(targetDir, lock);
+
+  reportLocalAddenda(skillsDir);
 
   console.log(`\nDone. ${installed} skill${installed !== 1 ? 's' : ''} installed${skipped ? `, ${skipped} skipped` : ''}.`);
   console.log('\nGet started:');
@@ -402,6 +417,8 @@ function update(targetDir, args) {
   pruneRetiredSkills(skillsDir, lock, shipped, stats);
 
   saveLock(targetDir, lock);
+
+  reportLocalAddenda(skillsDir);
 
   console.log(`\nUpdated ${stats.updated}, added ${stats.added}, pruned ${stats.pruned}, unchanged ${stats.unchanged}.`);
 

@@ -15,6 +15,11 @@ allowed-tools:
   - mcp__defprod__getUserStory
 ---
 
+> **Local extensions.** If a file named `SKILL.local.md` exists in this skill's
+> directory, read it now and fold it into the steps below. It records this
+> installation's local policies, additions, and overrides; where it conflicts
+> with the instructions here, the local file takes precedence.
+
 # Create CLI Tests
 
 Generates CLI integration tests for the stories in a product area whose surface is `cli` — either set explicitly via `UserStory.surface = 'cli'`, or inferred from the `CLI-…` story-key prefix when `surface` is unset. Each in-scope story gets its own test file with one `test()` per acceptance criterion. The harness spawns the built CLI binary as a one-shot Node subprocess per assertion, captures `stdout` / `stderr` / `exitCode`, and asserts on the observable surface. Stories on other surfaces are skipped with a one-line log entry — invoke the matching sibling skill, or `/defprod-create-area-tests` (the surface-aware dispatcher) for an end-to-end area walk.

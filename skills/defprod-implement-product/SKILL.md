@@ -20,6 +20,11 @@ allowed-tools:
   - mcp__defprod__patchProduct
 ---
 
+> **Local extensions.** If a file named `SKILL.local.md` exists in this skill's
+> directory, read it now and fold it into the steps below. It records this
+> installation's local policies, additions, and overrides; where it conflicts
+> with the instructions here, the local file takes precedence.
+
 # Implement Product
 
 Turns a DefProd product definition into a working codebase. Scaffolds the project (framework, build tooling, directory structure) then implements each area's user stories sequentially. Designed for **repeated invocation** — each run assesses current progress and advances to the next incomplete phase.

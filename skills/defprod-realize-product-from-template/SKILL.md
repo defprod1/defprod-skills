@@ -17,6 +17,11 @@ allowed-tools:                              # Used by Claude Code for tool permi
   - mcp__defprod__patchRepo
 ---
 
+> **Local extensions.** If a file named `SKILL.local.md` exists in this skill's
+> directory, read it now and fold it into the steps below. It records this
+> installation's local policies, additions, and overrides; where it conflicts
+> with the instructions here, the local file takes precedence.
+
 # Realize Product from Template
 
 Creates a new product from a DefProd **template** and scaffolds its codebase from the template's linked **starter Git repo**, then onboards and links the result.

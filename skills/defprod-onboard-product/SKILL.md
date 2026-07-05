@@ -29,6 +29,11 @@ allowed-tools:
   - mcp__defprod__createArchitectureElement
 ---
 
+> **Local extensions.** If a file named `SKILL.local.md` exists in this skill's
+> directory, read it now and fold it into the steps below. It records this
+> installation's local policies, additions, and overrides; where it conflicts
+> with the instructions here, the local file takes precedence.
+
 # Onboard Product
 
 Brings a product from repository discovery to a complete DefProd definition — brief, areas, user stories, validation, and optional architecture. Designed for repeated invocation: it checks what already exists and picks up where it left off.

@@ -15,6 +15,11 @@ allowed-tools:
   - mcp__defprod__getUserStory
 ---
 
+> **Local extensions.** If a file named `SKILL.local.md` exists in this skill's
+> directory, read it now and fold it into the steps below. It records this
+> installation's local policies, additions, and overrides; where it conflicts
+> with the instructions here, the local file takes precedence.
+
 # Create API Tests
 
 Generates HTTP integration tests for the stories in a product area whose surface is `api` — either set explicitly via `UserStory.surface = 'api'`, or inferred from the `API-…` story-key prefix when `surface` is unset. Each in-scope story gets its own test file with one `test()` call per acceptance criterion. Designed for backend / REST surfaces where the natural test runner is Vitest (preferred) or Jest, running against a live server's RPC endpoint. Stories on other surfaces are skipped with a one-line log entry — invoke the matching sibling skill, or `/defprod-create-area-tests` (the surface-aware dispatcher) for an end-to-end area walk.

@@ -18,6 +18,11 @@ allowed-tools:
   - mcp__defprod__getBriefForProduct
 ---
 
+> **Local extensions.** If a file named `SKILL.local.md` exists in this skill's
+> directory, read it now and fold it into the steps below. It records this
+> installation's local policies, additions, and overrides; where it conflicts
+> with the instructions here, the local file takes precedence.
+
 # Create UI Tests
 
 Generates browser-driven end-to-end tests (Playwright preferred, Cypress also supported) for a product area's UI stories — those whose `surface` field is `ui`, either explicitly set or inferred from the story-key prefix when no other surface is known. Each in-scope story gets its own test file with test cases mapped to acceptance criteria. Stories on other surfaces (`api`, `mcp`, `cli`, `script`, `library`, `other`) are skipped — invoke the matching sibling skill, or `/defprod-create-area-tests` (the surface-aware dispatcher) for an end-to-end area walk.

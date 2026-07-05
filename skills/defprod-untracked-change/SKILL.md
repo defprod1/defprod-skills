@@ -15,6 +15,11 @@ allowed-tools:
   - mcp__defprod__getChange
 ---
 
+> **Local extensions.** If a file named `SKILL.local.md` exists in this skill's
+> directory, read it now and fold it into the steps below. It records this
+> installation's local policies, additions, and overrides; where it conflicts
+> with the instructions here, the local file takes precedence.
+
 # Untracked Change
 
 The workflow front door for **recordless work**: real, quality-gated change that

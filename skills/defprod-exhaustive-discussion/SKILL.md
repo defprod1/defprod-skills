@@ -17,6 +17,11 @@ allowed-tools:
   - mcp__defprod__getArchitectureForProduct
 ---
 
+> **Local extensions.** If a file named `SKILL.local.md` exists in this skill's
+> directory, read it now and fold it into the steps below. It records this
+> installation's local policies, additions, and overrides; where it conflicts
+> with the instructions here, the local file takes precedence.
+
 Drive the conversation like a senior architect performing a design review.
 
 Systematically walk the design tree:

@@ -38,6 +38,8 @@ npx @defprod/skills update
 
 Pulls new versions of all installed skills — both official and community — without overwriting files you've modified locally. To accept an updated version of a file you've changed, delete your copy and run update again.
 
+> **Prefer `SKILL.local.md` over editing a shipped `SKILL.md`.** Editing a shipped file in place freezes it out of all future updates (its hash no longer matches anything upstream). Instead, put your local additions and overrides in a `SKILL.local.md` companion — see [Customizing a skill locally](#customizing-a-skill-locally). The shipped file then keeps updating and your customization is preserved.
+
 ### Auto-prune of retired skills
 
 When an official skill is renamed or removed across versions, its old directory name is added to a small explicit list (`retired-skills.json` in the package). On `update`, the installer checks the user's skills directory for any of those names and:
@@ -46,6 +48,38 @@ When an official skill is renamed or removed across versions, its old directory 
 - If any file has been locally modified, the directory is **kept** and reported so you can copy out your changes before removing it manually.
 
 The list is **explicit** (specific names), never a wildcard like `defprod-*` — so a user-created skill that happens to share the prefix is never touched. The pristine check uses the same hash manifest (`known-shipped.json`) that protects modified files from being overwritten elsewhere in `update`.
+
+## Customizing a skill locally
+
+Every shipped skill can be customized **without forking it**. Each `SKILL.md` opens with a
+pointer: if a file named `SKILL.local.md` exists in the same directory, the agent reads it and
+folds it into the skill, with the local file taking precedence on any conflict.
+
+To add a local policy, extra step, or override to a skill, create a `SKILL.local.md` beside its
+`SKILL.md`:
+
+```bash
+# .claude/skills/defprod-change-test/SKILL.local.md
+```
+
+```markdown
+## Skip policy
+
+In this repo, a stage may be skipped only for genuine third-party systems we do not control.
+```
+
+Why this instead of editing `SKILL.md` directly:
+
+- **The shipped `SKILL.md` stays pristine**, so `update` keeps delivering upstream fixes to it.
+- **`SKILL.local.md` is never touched** by `install` or `update` — it isn't a shipped file, so it
+  is never overwritten and never enters the lock. `update` reports which skills have one.
+- Your customization is **free-form Markdown** — additions, or overrides phrased as "do X instead
+  of the shipped step". Mirror the shipped `## Heading` names to signal which section you're
+  extending.
+
+A skill you have fully re-authored in place is a **fork**: `update` reports it as "locally
+modified" and leaves it alone. If you later want it to track upstream again, reset its `SKILL.md`
+to the shipped version and move your changes into `SKILL.local.md`.
 
 ## Uninstall
 

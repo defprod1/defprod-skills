@@ -18,6 +18,11 @@ allowed-tools:
   - mcp__defprod__getBriefForProduct
 ---
 
+> **Local extensions.** If a file named `SKILL.local.md` exists in this skill's
+> directory, read it now and fold it into the steps below. It records this
+> installation's local policies, additions, and overrides; where it conflicts
+> with the instructions here, the local file takes precedence.
+
 # Analyse Discrepancies
 
 Compares a product area's user stories and acceptance criteria against the actual codebase implementation. Identifies drift in both directions: features defined but not implemented, and features implemented but not defined. Produces a structured report that drives `/defprod-fix-discrepancies`.

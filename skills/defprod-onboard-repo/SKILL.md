@@ -15,6 +15,11 @@ allowed-tools:                              # Used by Claude Code for tool permi
   - mcp__defprod__patchRepo
 ---
 
+> **Local extensions.** If a file named `SKILL.local.md` exists in this skill's
+> directory, read it now and fold it into the steps below. It records this
+> installation's local policies, additions, and overrides; where it conflicts
+> with the instructions here, the local file takes precedence.
+
 # Onboard Repo
 
 Scans a repository to discover applications and libraries, proposes which applications should become DefProd products, and writes a confirmed onboarding document that drives per-product definition. Works for both multi-product monorepos and single-app repositories.
