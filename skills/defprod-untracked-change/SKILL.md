@@ -114,7 +114,7 @@ Invoke `/defprod-change-land`. With no context it commits and lands **silently**
 - **No `Change:` trailer** (there is no change to correlate) — use the repo's
   ordinary commit conventions, with an appropriate conventional-commit prefix
   (`chore:`, `fix:`, `style:`, …).
-- **No `[skip cd]`** — untracked work is shippable; it deploys like anything else
+- **No `[skip ci]`** — untracked work is shippable; it deploys like anything else
   on the deployable branch.
 - Honour the repo's standing push/merge consent exactly as `/defprod-change-land`
   does.
