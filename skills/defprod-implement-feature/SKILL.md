@@ -30,6 +30,9 @@ Invoke **`/defprod-change`** with:
 - **the task description** the user gave, as the intake material. If the user
   referenced an external ticket, pass its ref/URL so the tracker adapter can
   fetch it; otherwise it proceeds as ad-hoc internal work.
+- **any driver-override args** the user supplied (e.g. `--auto`, `--auto-all`,
+  `<stage>=<driver>`) — forward them verbatim; `/defprod-change` interprets them
+  (see its *Driver overrides* section).
 
 The orchestrator will create (or resume) the change record and walk the
 pipeline: define (user story alignment) → code → test → review → land, with

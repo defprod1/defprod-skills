@@ -58,6 +58,51 @@ product's pipeline config says it should.
   the skill: `agent` → `autonomous` (run to completion, no questions),
   `human` → `interactive` (clarify as needed, and **never finish the stage
   without explicit human approval**). `cicd` hands the stage to CI/CD.
+- **Driver overlay** — a per-run `stage → driver` map the caller supplies at
+  invocation that takes precedence over the product's `changePipeline` driver,
+  **for this run only**. It is never written back to the product (no
+  `patchProduct`) — it is a caller override, not a config edit. Resolution
+  precedence (high → low): explicit per-stage override → shorthand → product
+  config entry → built-in default. The overlay changes only the **resolved
+  driver**; the driver→mode translation above and the stage skills themselves
+  are unchanged. Constraints: it may set only `human`/`agent`, and only for
+  skill-backed stages (design/define/code/test/review/merge/push) — it cannot
+  hand a skill-less cicd stage (build/package/staging/ship) an agent to run, so
+  such an override is ignored with a note. See **Driver overrides** below.
+
+## Driver overrides (per-run)
+
+The caller can override stage drivers for a single run without editing the
+product's pipeline config. Pass overrides as invocation args alongside the
+ticket ref (they coexist):
+
+- **`--auto`** (alias `autonomous`) — flip every **skill-backed** stage to
+  `agent`. The intent is **still confirmed with you** before the change is
+  created, and the `accept` gate is preserved. Use when you're confident the
+  build can run hands-off but still want to approve *what* is being built.
+- **`--auto-all`** (alias `yolo`) — everything `--auto` does, **plus**
+  auto-confirm the distilled intent and the `accept` gate: zero prompts from
+  invocation to the CI/CD handoff (or ship). Use only when you're confident the
+  change can go all the way through unattended.
+- **`--interactive`** (alias `review-all`) — flip every skill-backed stage to
+  `human` (each keeps you in the loop and won't finish without approval).
+- **`<stage>=<driver>`** — fine-grained per-stage override, space-separated and
+  combinable with a shorthand; explicit pairs win. `<driver>` ∈ {`human`,
+  `agent`}. E.g. `--auto review=human` runs everything autonomously except
+  review, which stays a human gate.
+
+Examples:
+
+```
+/defprod-change PAY-12 --auto                 # loop autonomous; you still confirm the intent
+/defprod-change PAY-12 --auto review=human    # autonomous except a human review gate
+/defprod-change PAY-12 code=agent review=human
+/defprod-change --auto-all                    # bare ad-hoc work, fully unattended
+```
+
+The same overrides flow through the `/defprod-implement-feature` and
+`/defprod-fix-bug` shims. Invocation args, when present, **replace** any overlay
+persisted from an earlier run; absent args, the persisted overlay stands.
 
 ## Workflow
 
@@ -85,6 +130,12 @@ Fetch the resolved product with `getProduct`, **note its `slug`** (carried into
 the change context in Step 4 for the land trailer), and resolve the pipeline
 config as above.
 
+Then resolve the **driver overlay** from the invocation args (see *Driver
+overrides*). Apply it on top of the pipeline config and **echo the effective
+driver map**, marking overridden stages (e.g. `review: agent * ← was human`),
+then proceed — no confirmation prompt. Ignore (and note) any override targeting
+a skill-less cicd stage.
+
 ### Step 2 — Fetch the ticket (intake)
 
 - **With a ticket ref/URL**: fetch it via the **`/defprod-change-tracker`**
@@ -97,7 +148,10 @@ config as above.
 Classify the **type** (`feature` | `enhancement` | `bug`) from the ticket or
 ask. Distill the **intent** (markdown: what we are changing and why — the
 accepted decision, not a paste of the ticket) and **confirm it with the user
-before creating anything**.
+before creating anything**. Under **`--auto-all`**, skip this confirmation and
+the `accept` gate — the distilled intent is accepted as-is and recorded as the
+change's intent. `--auto` does **not** skip it: you still confirm *what* is
+being built.
 
 ### Step 3 — Dedupe, then create the change
 
@@ -131,7 +185,11 @@ Make the change discoverable by stage skills and CI hooks:
    operator explicitly forces it (`--force`). A leftover pin from a
    **shipped/cancelled** change is stale — replace it freely. This makes two
    sessions unable to silently share one tree: the second change must be forced,
-   or belongs in a separate worktree/branch.
+   or belongs in a separate worktree/branch. If a driver overlay was resolved in
+   Step 1, persist it here too as a `driverOverrides` object (e.g.
+   `"driverOverrides": { "review": "human", "code": "agent" }`) so the override
+   survives a CI/CD-handoff → resume cycle. It is cleared with the pin on
+   ship/cancel.
 2. In branch-based flows, create the branch **`chg/CHG-NN-<short-slug>`**.
 3. (Commits made later by `/defprod-change-land` carry the
    `Change: <product-slug>/CHG-NN` trailer.)
@@ -144,7 +202,10 @@ promoted with the change key (`link` operation).
 Repeat until the pipeline ends or control leaves the agent:
 
 1. Fetch the change (`getChange`) and **re-read the pipeline config** — never
-   plan the whole run upfront; config and position may have changed.
+   plan the whole run upfront; config and position may have changed. Then
+   **re-apply the run overlay** (the resolved overrides, persisted in
+   `.defprod/change` as `driverOverrides`) so the override is honoured every
+   iteration and survives a resume.
 2. Determine the next enabled stage after the current position.
    - No next stage → the change is shipped or at pipeline end; go to Step 6.
 3. Consult that stage's **driver** and act:
@@ -197,8 +258,14 @@ already cleared at the land hand-off, Step 5 / `change-land`.)
   the stage skill's **interactive** approval-before-finish, so "continue" means
   re-reading the next stage's driver and invoking its skill with the right
   mode — never advancing a `human`-driven stage to `finished` unprompted.
+- **Driver overrides are per-run, never config.** Resolve the overlay on top of
+  the freshly-read config each iteration; never `patchProduct`. Precedence:
+  explicit pair → shorthand → config → default. The overlay sets only
+  `human`/`agent` on skill-backed stages — a skill-less cicd stage can't be
+  overridden to agent. Echo the effective map once at run start; don't prompt.
 - **The intent field is the accepted decision** — confirmed by the user, not a
-  ticket paste.
+  ticket paste. (`--auto-all` accepts the distilled intent as-is; `--auto` does
+  not.)
 - **Never write lifecycle state via patch** — position moves only through the
   stage-action tools.
 - **One change at a time per worktree** — `.defprod/change` **locks** it: Step 4
