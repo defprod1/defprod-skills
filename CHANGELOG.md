@@ -4,6 +4,19 @@ All notable changes to `@defprod/skills` are documented here. The format roughly
 
 The **source of truth for release notes is the [GitHub Releases](https://github.com/defprod1/defprod-skills/releases) page** for this repository. Each entry below mirrors a GitHub Release; click the version heading to read the full body, including any breaking-change upgrade guidance.
 
+## [1.12.0] — 2026-07-17
+
+### Added
+
+- **`defprod-onboard-product` guide-UI progress tracking.** New *Progress tracking* section patches `onboardingProgress.completedSteps` (the `ProductOnboardingStep` enum) after each phase, idempotently signalling workflow progress to the guide UI.
+- Phase 4 now emits a full product-level **Validation Report** (four categorised discrepancy tables); Phase 5 gains a medium-depth architecture tree example and element-type list.
+
+### Changed
+
+- `defprod-onboard-product` Phase 1b honours partial-mapping include/exclude paths and follows shared libraries for context only; Phase 2 orders areas by importance (`order` field); brief persona/requirement field shapes corrected to match the Brief schema. (Merges the last monorepo-side fork of this skill into canonical.)
+
+See [v1.12.0 release notes](https://github.com/defprod1/defprod-skills/releases/tag/v1.12.0) for the full body.
+
 ## [1.11.1] — 2026-07-17
 
 ### Fixed
@@ -183,6 +196,7 @@ See [v1.1.0 release notes](https://github.com/defprod1/defprod-skills/releases/t
 
 Initial public release.
 
+[1.12.0]: https://github.com/defprod1/defprod-skills/releases/tag/v1.12.0
 [1.11.1]: https://github.com/defprod1/defprod-skills/releases/tag/v1.11.1
 [1.11.0]: https://github.com/defprod1/defprod-skills/releases/tag/v1.11.0
 [1.10.0]: https://github.com/defprod1/defprod-skills/releases/tag/v1.10.0
