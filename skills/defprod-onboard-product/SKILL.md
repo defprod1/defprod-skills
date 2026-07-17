@@ -135,13 +135,18 @@ If no Repo ID is available (skill running outside the guide flow), call `createP
 
 Read the onboarding document to find the package paths for this product. Then research those packages:
 
-- Read documentation files (README, docs/, CONTRIBUTING, etc.)
+- Read documentation files (README, docs/, CONTRIBUTING, ARCHITECTURE, CHANGELOG, `CLAUDE.md`/`AGENTS.md`/`.cursor/rules/`, API specs)
 - Read the project manifest (package.json, pyproject.toml, etc.)
-- Explore the source structure — entry points, route definitions, key modules
+- Explore the source structure — entry points, route definitions, key modules, data models, guards/middleware, background jobs, integrations
+- Read a representative sample of test files — they reveal expected behaviours
 - Identify the main user-facing capabilities
 - Identify the technology stack
 
 Use `.defprod/defprod.json` paths if available to focus research on the right directories.
+
+**Respect partial mappings.** If the onboarding document gives include/exclude paths for this product (its slice of a shared package), research only code within the include paths and skip the excludes — do not describe another product's slice of the same package.
+
+**Follow into shared libraries for context only.** Consult the onboarding document's "Libraries" table to see which shared libs this product uses; read their types/interfaces/exports to understand data shapes — but do **not** create areas or stories for shared-library functionality. It informs understanding, not the definition.
 
 #### 1c. Populate the brief
 
@@ -154,8 +159,8 @@ Call `patchBrief` from the DefProd MCP server to populate each section. To avoid
 - `problem.impact` — what happens if the problem isn't solved
 
 **Call 2 — Users and requirements:**
-- `users` — 2-5 user personas, each with name, description, goals, and pain points
-- `requirements` — 10-25 functional requirements covering the product's capabilities
+- `users` — 2-5 personas, each with `title` (the persona name — e.g. "Engineering Lead"), `description`, `goals` (3-5), and `painPoints` (2-4)
+- `requirements` — 10-25 requirements at feature-group level, each with `id` (`REQ-01`, `REQ-02`, …), `title`, `description`, and `priority` (`must` / `should` / `could` / `wont`)
 
 **Call 3 — Success criteria and aesthetics:**
 - `successCriteria` — 5-10 measurable success criteria
@@ -186,13 +191,13 @@ Explore the codebase to identify logical areas. Look for:
 
 #### 2b. Propose areas
 
-Present a table of proposed areas:
+Present a table of proposed areas, **ordered by importance** — core/critical functionality first, supporting/peripheral areas last (this ordering drives the `order` field and the Phase 3 story sequence):
 
-| Area | Key | Description |
-|------|-----|-------------|
-| ... | ... | ... |
+| # | Key | Area | Description |
+|---|-----|------|-------------|
+| ... | ... | ... | ... |
 
-Ask the user to confirm, add, remove, or rename areas before creating them.
+Ask the user to confirm, add, remove, rename, split, merge, or reorder areas before creating them.
 
 #### 2c. Create areas
 
@@ -201,6 +206,7 @@ For each confirmed area, call `createArea` from the DefProd MCP server with:
 - `key` — short uppercase key (e.g. `AUTH`, `BILLING`, `TEAM`)
 - `productId` — the product ID
 - `description` — 1-2 sentences explaining the area's scope
+- `order` — sequential integer matching the confirmed importance ordering
 
 `createArea` returns `{areaId, key, name, productId}`. You will reference areas by `key` when creating stories in Phase 3 — there is no need to pair returned `areaId` UUIDs with requested keys, and doing so from memory across batches is where area-mismatch bugs come from.
 
@@ -348,19 +354,48 @@ For each area, compare the user stories and acceptance criteria against the actu
 3. **Code with no story** — implemented features missing from the definition
 4. **Diverged details** — story describes one thing, code does another
 
-#### 4b. Present findings
+#### 4b. Consolidate into a product-level report
 
-Show a consolidated summary of discrepancies across all areas. Ask the user how to handle them:
+Combine the per-area results into a single report and present it:
 
-> **Discrepancies found:**
-> - 3 stories have acceptance criteria not fully covered by code
-> - 5 implemented features have no corresponding user story
-> - 2 stories describe behaviour that differs from the implementation
->
-> How would you like to proceed?
-> - **Fix all** — update the definition to match reality
-> - **Cherry-pick** — review each discrepancy individually
-> - **Skip** — accept the definition as-is and move on
+```
+## Validation Report — <Product Name>
+
+### Summary
+- Areas analysed: N
+- Total discrepancies: N
+  - Stories/ACs with no code: N
+  - ACs incorrectly described: N
+  - Code with no story: N
+  - Details diverge: N
+
+### Category 1 — Stories/ACs with No Code
+| Area | Story | AC / Detail | Recommendation |
+|------|-------|-------------|----------------|
+| ... | ... | ... | Remove story / Update AC / ... |
+
+### Category 2 — ACs Incorrectly Described
+| Area | Story | AC | Current | Actual | Recommendation |
+|------|-------|----|---------|--------|----------------|
+| ... | ... | ... | ... | ... | Patch AC to: "..." |
+
+### Category 3 — Code with No Story
+| Area | Feature | Location | Recommendation |
+|------|---------|----------|----------------|
+| ... | ... | ... | Create story: "..." |
+
+### Category 4 — Details Diverge
+| Area | Story | Divergence | Recommendation |
+|------|-------|------------|----------------|
+| ... | ... | ... | Patch story/AC to: "..." |
+```
+
+Then ask how to proceed:
+
+> **How would you like to handle these discrepancies?**
+> - **Fix all** — apply all recommended changes automatically
+> - **Cherry-pick** — go through each and decide individually
+> - **Skip** — leave the definition as-is (re-run validation later)
 
 #### 4c. Apply fixes
 
@@ -390,7 +425,33 @@ Explore the codebase for:
 
 #### 5b. Create architecture elements
 
-Call `createArchitectureElement` for each component, organising them into a tree that reflects the system's structure.
+Fetch the product's architecture via `getArchitectureForProduct` to get the `architectureId` and root element, then `getArchitectureTree` to see the current tree (usually just the root).
+
+Create elements at **medium depth** — top-level components plus one level of major modules/services:
+
+```
+Root (type: architecture)
+├── Frontend App (type: frontend)
+│   ├── Auth Module (type: module)
+│   ├── Customer Module (type: module)
+│   └── Shared Components (type: component)
+├── Backend API (type: backend)
+│   ├── Auth Service (type: service)
+│   ├── Customer Service (type: service)
+│   └── Database Repository Layer (type: repository)
+├── PostgreSQL Database (type: database)
+├── Stripe Integration (type: externalSystem)
+└── Common Library (type: library)
+```
+
+Call `createArchitectureElement` for each element:
+- `architectureId` — from the product's architecture
+- `parentId` — the root's ID for top-level nodes; the parent node's ID for children
+- `name` — human-readable component name
+- `type` — one of `frontend`, `backend`, `module`, `layer`, `component`, `service`, `repository`, `database`, `externalSystem`, `library`, `other`
+- `content` — 2-4 sentences describing the component's role (Markdown)
+
+Create elements top-down (parents before children); batch where possible.
 
 ---
 
@@ -425,6 +486,20 @@ Suggest next steps:
 
 ---
 
+## Progress tracking (guide UI)
+
+If the product is being onboarded through the guide flow (it was created with a `repoId`), signal workflow progress to the guide UI by keeping `onboardingProgress.completedSteps` current via `patchProduct`. Each step is a value from the `ProductOnboardingStep` enum: `productCreated`, `briefPopulated`, `areasCreated`, `storiesCreated`, `storiesValidated`, `discrepanciesFixed`, `architectureDefined`, `architectureSkipped`.
+
+After each phase completes, patch the **full accumulated array** (use `"op": "add"` so it works whether or not the field exists yet) — always the complete set, never an append, so re-invocation stays idempotent:
+
+```json
+[{ "op": "add", "path": "/onboardingProgress", "value": { "completedSteps": ["productCreated", "briefPopulated", "areasCreated"] } }]
+```
+
+Add `discrepanciesFixed` only if Phase 4 fixes were applied; add `architectureDefined` or `architectureSkipped` after Phase 5. If the product has no `repoId` (running outside the guide flow), skip this — there is no guide UI to signal.
+
+---
+
 ## Rules
 
 - **Always check status first** — never recreate what already exists. Read before writing.
@@ -438,6 +513,7 @@ Suggest next steps:
 - **One story per navigation surface, not per item** — sidenavs, user menus, tab bars collapse into a single story whose AC enumerates the items as a table.
 - **Halt on thin areas** — if an area ends with fewer than 3 stories after Phase 3d lint, ask the user before moving on.
 - **Always pass `areaKey`, not `areaId`, on `createUserStory`** — semantic keys can't drift the way opaque UUIDs carried across batches can. Re-fetch via `listAreas` before each batch; verify via `listUserStories` after each batch.
+- **Respect the onboarding document** as the source of truth for package mappings and scope — honour include/exclude paths for partial mappings, and follow into shared libraries for context only (never define stories for shared-lib functionality).
 - **Don't reference internal tooling** — this skill should work with any codebase and test framework. Don't hardcode paths to specific tools or scripts.
 - **Description quality matters** — acceptance criteria should be specific enough that a developer or test framework can verify them. "Works correctly" is not an acceptance criterion.
 - **Batch MCP calls** where possible to minimise round trips.
