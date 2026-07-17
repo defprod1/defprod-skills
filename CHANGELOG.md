@@ -4,6 +4,14 @@ All notable changes to `@defprod/skills` are documented here. The format roughly
 
 The **source of truth for release notes is the [GitHub Releases](https://github.com/defprod1/defprod-skills/releases) page** for this repository. Each entry below mirrors a GitHub Release; click the version heading to read the full body, including any breaking-change upgrade guidance.
 
+## [1.10.0] — 2026-07-17
+
+### Changed
+
+- **Concurrency-safe change sessions.** The `.defprod/change` pin is now a lock: `defprod-change` refuses to claim a worktree already pinned to a different *active* change (override with `--force`), so two sessions can't silently share one tree. As a mid-stage backstop, `defprod-change-land` re-validates branch/pin consistency before committing and aborts on mismatch — preventing a commit from landing on the wrong branch when the tree drifts underneath a running stage.
+
+See [v1.10.0 release notes](https://github.com/defprod1/defprod-skills/releases/tag/v1.10.0) for the full body.
+
 ## [1.9.1] — 2026-07-16
 
 ### Fixed
@@ -159,6 +167,7 @@ See [v1.1.0 release notes](https://github.com/defprod1/defprod-skills/releases/t
 
 Initial public release.
 
+[1.10.0]: https://github.com/defprod1/defprod-skills/releases/tag/v1.10.0
 [1.9.1]: https://github.com/defprod1/defprod-skills/releases/tag/v1.9.1
 [1.9.0]: https://github.com/defprod1/defprod-skills/releases/tag/v1.9.0
 [1.8.0]: https://github.com/defprod1/defprod-skills/releases/tag/v1.8.0
