@@ -4,6 +4,14 @@ All notable changes to `@defprod/skills` are documented here. The format roughly
 
 The **source of truth for release notes is the [GitHub Releases](https://github.com/defprod1/defprod-skills/releases) page** for this repository. Each entry below mirrors a GitHub Release; click the version heading to read the full body, including any breaking-change upgrade guidance.
 
+## [1.11.0] — 2026-07-17
+
+### Added
+
+- **Per-run driver overrides for `/defprod-change`.** Steer who drives each pipeline stage for a single run without editing the product's pipeline config: `--auto` (skill-backed stages → `agent`), `--auto-all` (also auto-confirms intent + `accept` gate), `--interactive` (→ `human`), and fine-grained `<stage>=<driver>` pairs (combinable, explicit pairs win). The resolved overlay is echoed at run start, persisted in `.defprod/change` as `driverOverrides` (survives a CI/CD-handoff → resume), and re-applied each loop iteration — never written back to the product config. The `/defprod-implement-feature` and `/defprod-fix-bug` shims forward override args verbatim.
+
+See [v1.11.0 release notes](https://github.com/defprod1/defprod-skills/releases/tag/v1.11.0) for the full body.
+
 ## [1.10.0] — 2026-07-17
 
 ### Changed
@@ -167,6 +175,7 @@ See [v1.1.0 release notes](https://github.com/defprod1/defprod-skills/releases/t
 
 Initial public release.
 
+[1.11.0]: https://github.com/defprod1/defprod-skills/releases/tag/v1.11.0
 [1.10.0]: https://github.com/defprod1/defprod-skills/releases/tag/v1.10.0
 [1.9.1]: https://github.com/defprod1/defprod-skills/releases/tag/v1.9.1
 [1.9.0]: https://github.com/defprod1/defprod-skills/releases/tag/v1.9.0
