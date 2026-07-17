@@ -43,6 +43,32 @@ This stage handles **two pipeline stages** — `merge` and `push` — stamping
 whichever of them are enabled in the product's pipeline. **If no context
 resolves, proceed silently** (commit/push without stamping or trailer).
 
+### Branch/pin consistency guard (before any commit)
+
+The worktree can drift underneath you — when multiple change sessions run, a
+concurrent session may check the tree over to another change's branch and
+repoint `.defprod/change` between the moment this stage began and the moment you
+commit. Committing then silently lands your work on **the wrong branch** (and the
+intended push becomes a no-op). Before committing (Workflow step 1),
+**re-validate** that the tree is still the one you resolved context for, and
+**abort loudly** — do not commit — if any of these hold:
+
+- **Pin ⇄ branch disagree.** HEAD is on a `chg/CHG-NN-*` branch whose `CHG-NN`
+  differs from the `changeKey` in `.defprod/change`. The tree was checked over
+  to a different change's branch than the pin claims — corruption in progress.
+- **Pin moved off your change.** A context was resolved at preamble, but a fresh
+  read of `.defprod/change` now names a **different** `changeId` than the one you
+  resolved. Another session claimed this tree; stop before your commit lands
+  under its identity.
+- **Branch ⇄ resolved-change disagree.** You resolved an active change (with a
+  `chg/CHG-NN-*` branch flow) but HEAD is on neither that change's branch nor the
+  default branch — an unexpected checkout happened underneath the stage.
+
+On any mismatch, **abort with a clear message** naming the expected vs. actual
+branch and pinned change, and do nothing destructive (no commit, no branch
+switch, no pin rewrite) — recovery is the operator's call. A clean tree (pin,
+branch, and resolved change all agree, or genuine no-context) proceeds normally.
+
 ## Execution mode (autonomous / interactive)
 
 The orchestrator passes a **mode** derived from this stage's `driver`:

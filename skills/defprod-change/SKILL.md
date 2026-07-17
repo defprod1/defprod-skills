@@ -123,8 +123,15 @@ Make the change discoverable by stage skills and CI hooks:
    `{ "productId": "...", "changeId": "...", "changeKey": "CHG-NN", "productSlug": "..." }`
    (`productSlug` is the resolved product's slug from Step 1 — the land stage
    uses it for the `Change: <slug>/CHG-NN` trailer without a round-trip.)
-   Overwrite any existing pin — the new change now owns the worktree; a leftover
-   pin from a shipped/cancelled change is stale and is replaced here.
+   **The pin is a lock, not a claim.** Before writing it, read any existing
+   `.defprod/change` and check it: if it names a **different** change, `getChange`
+   it — if that change is still **active** (not shipped/cancelled), this worktree
+   is already hands-on for another change. **Refuse** to overwrite the pin and
+   stop with a clear message (the other change's key + its branch), unless the
+   operator explicitly forces it (`--force`). A leftover pin from a
+   **shipped/cancelled** change is stale — replace it freely. This makes two
+   sessions unable to silently share one tree: the second change must be forced,
+   or belongs in a separate worktree/branch.
 2. In branch-based flows, create the branch **`chg/CHG-NN-<short-slug>`**.
 3. (Commits made later by `/defprod-change-land` carry the
    `Change: <product-slug>/CHG-NN` trailer.)
@@ -194,11 +201,15 @@ already cleared at the land hand-off, Step 5 / `change-land`.)
   ticket paste.
 - **Never write lifecycle state via patch** — position moves only through the
   stage-action tools.
-- **One change at a time per worktree** — `.defprod/change` pins it; parallel
-  changes belong in separate worktrees or branches. The pin is cleared at the
-  land hand-off and on cancel, and stage skills **self-heal** a stale pin on
-  read (validate the pinned change is active; delete it if shipped/cancelled),
-  so a leftover pin never traps the next change. Invariant: *pin present ⇔ a
-  change is hands-on in this worktree*.
+- **One change at a time per worktree** — `.defprod/change` **locks** it: Step 4
+  refuses to claim a tree already pinned to a *different active* change (override
+  only with `--force`), so parallel changes cannot silently share a tree — they
+  belong in separate worktrees or branches. The pin is cleared at the land
+  hand-off and on cancel, and stage skills **self-heal** a stale pin on read
+  (validate the pinned change is active; delete it if shipped/cancelled), so a
+  leftover pin never traps the next change. As a backstop against a tree that
+  drifts *mid-stage*, `/defprod-change-land` re-validates branch/pin consistency
+  before committing and aborts on mismatch. Invariant: *pin present ⇔ a change is
+  hands-on in this worktree*.
 - Mid-flight tracker sync is out of scope: DefProd is the source of truth
   between the link and close bookends.
