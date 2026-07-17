@@ -101,6 +101,7 @@ Call `patchBrief` from the DefProd MCP server to populate the product brief. Spl
 #### Call 1 — Core identity
 
 - `description` — 2-3 sentences: what the product does and who it serves
+- `positioning` — 1-3 sentences: market category, differentiation, and competitive context
 - `problem.summary` — the core problem this product solves
 - `problem.context` — background, market context, or motivation
 - `problem.impact` — consequences of the problem being unsolved
