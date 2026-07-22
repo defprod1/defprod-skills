@@ -4,6 +4,14 @@ All notable changes to `@defprod/skills` are documented here. The format roughly
 
 The **source of truth for release notes is the [GitHub Releases](https://github.com/defprod1/defprod-skills/releases) page** for this repository. Each entry below mirrors a GitHub Release; click the version heading to read the full body, including any breaking-change upgrade guidance.
 
+## [1.13.0] — 2026-07-23
+
+### Changed
+
+- **Product-qualified change branches.** The change workflow now creates branches as `chg/<product-slug>/CHG-NN-<slug>`, so the branch tail matches the `Change: <slug>/CHG-NN` commit trailer and names its product at a glance in a multi-product monorepo. Every stage skill's context resolution accepts both the new nested form and the legacy `chg/CHG-NN-*`; the land-stage consistency guards were updated to match. Pairs with `@defprod/scripts` v1.4.0.
+
+See [v1.13.0 release notes](https://github.com/defprod1/defprod-skills/releases/tag/v1.13.0) for the full body.
+
 ## [1.12.0] — 2026-07-17
 
 ### Added
