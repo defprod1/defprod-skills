@@ -27,7 +27,7 @@ trailer that CI/CD hooks use to stamp the remaining pipeline stages.
 
 Resolve the current change context, in precedence order:
 1. `.defprod/change` in the worktree root — JSON `{ productId, changeId, changeKey, productSlug }`.
-2. A branch named `chg/CHG-NN-*` → resolve via `getChange { productId, key }`.
+2. A branch named `chg/<slug>/CHG-NN-*` (or legacy `chg/CHG-NN-*`) → resolve via `getChange { productId, key }`.
 3. A `Change: <product-slug>/CHG-NN` trailer on the HEAD commit → resolve the
    slug to a product, then `getChange { productId, key }`. Tolerate a legacy
    bare `Change: CHG-NN` (no slug) on pre-existing history — resolve it with the
@@ -53,7 +53,7 @@ intended push becomes a no-op). Before committing (Workflow step 1),
 **re-validate** that the tree is still the one you resolved context for, and
 **abort loudly** — do not commit — if any of these hold:
 
-- **Pin ⇄ branch disagree.** HEAD is on a `chg/CHG-NN-*` branch whose `CHG-NN`
+- **Pin ⇄ branch disagree.** HEAD is on a `chg/<slug>/CHG-NN-*` branch whose `CHG-NN`
   differs from the `changeKey` in `.defprod/change`. The tree was checked over
   to a different change's branch than the pin claims — corruption in progress.
 - **Pin moved off your change.** A context was resolved at preamble, but a fresh
@@ -61,7 +61,7 @@ intended push becomes a no-op). Before committing (Workflow step 1),
   resolved. Another session claimed this tree; stop before your commit lands
   under its identity.
 - **Branch ⇄ resolved-change disagree.** You resolved an active change (with a
-  `chg/CHG-NN-*` branch flow) but HEAD is on neither that change's branch nor the
+  `chg/<slug>/CHG-NN-*` branch flow) but HEAD is on neither that change's branch nor the
   default branch — an unexpected checkout happened underneath the stage.
 
 On any mismatch, **abort with a clear message** naming the expected vs. actual
@@ -113,7 +113,7 @@ you default to committing and stopping.
    records completion. If the operation fails, leave the stage started (or
    `cancelChangeStage` if you abandon it) — never finish a stage whose operation
    did not succeed.
-   - **Branch/PR flow**: push the `chg/CHG-NN-*` branch and open/hand off the
+   - **Branch/PR flow**: push the `chg/<slug>/CHG-NN-*` branch and open/hand off the
      PR. The `merge` stage finishes when the PR merges — if you perform the
      merge, `startChangeStage { stage: 'merge' }` before it and
      `finishChangeStage { stage: 'merge' }` after; if the platform/CI performs

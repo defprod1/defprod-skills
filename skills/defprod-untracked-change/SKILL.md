@@ -65,7 +65,7 @@ This skill must run **context-free** so the reused stage skills stamp nothing.
 Verify none of the three change-context carriers resolves:
 
 1. `.defprod/change` in the worktree root.
-2. The current branch is named `chg/CHG-NN-*`.
+2. The current branch is named `chg/<slug>/CHG-NN-*` (or legacy `chg/CHG-NN-*`).
 3. The HEAD commit has a `Change: CHG-NN` trailer.
 
 If a carrier is present, `getChange` on its key:
@@ -122,7 +122,7 @@ Invoke `/defprod-change-land`. With no context it commits and lands **silently**
 ## Rules
 
 - **Establishes no change context, ever** — never writes `.defprod/change`, never
-  creates a `chg/CHG-NN-*` branch, never appends a `Change:` trailer.
+  creates a `chg/<slug>/CHG-NN-*` branch, never appends a `Change:` trailer.
 - **Stamps nothing** — there is no change record; the reused stage skills run in
   their silent, no-context mode.
 - **The quality gates are not optional** — test and review run; that is the whole

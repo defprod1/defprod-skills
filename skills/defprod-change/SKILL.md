@@ -190,7 +190,7 @@ Make the change discoverable by stage skills and CI hooks:
    `"driverOverrides": { "review": "human", "code": "agent" }`) so the override
    survives a CI/CD-handoff → resume cycle. It is cleared with the pin on
    ship/cancel.
-2. In branch-based flows, create the branch **`chg/CHG-NN-<short-slug>`**.
+2. In branch-based flows, create the branch **`chg/<product-slug>/CHG-NN-<short-slug>`** — the `<slug>/CHG-NN` tail matches the commit trailer (D23). (Legacy bare `chg/CHG-NN-<short-slug>` branches are still recognised by the stage skills and CI.)
 3. (Commits made later by `/defprod-change-land` carry the
    `Change: <product-slug>/CHG-NN` trailer.)
 
