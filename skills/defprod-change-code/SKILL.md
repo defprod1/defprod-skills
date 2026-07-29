@@ -30,7 +30,7 @@ stories' acceptance criteria (features/enhancements) or the traced root cause
 ## Change context (stamping preamble)
 
 Resolve the current change context, in precedence order:
-1. `.defprod/change` in the worktree root — JSON `{ productId, changeId, changeKey, productSlug }`.
+1. `.defprod/change` in the worktree root — JSON `{ productId, changeId, changeKey, productSlug, multiProduct }`.
 2. A branch named `chg/<slug>/CHG-NN-*` (or legacy `chg/CHG-NN-*`) → resolve via `getChange { productId, key }`.
 3. A `Change: <product-slug>/CHG-NN` trailer on the HEAD commit → resolve the slug
    to a product, then `getChange { productId, key }` (tolerate a legacy bare

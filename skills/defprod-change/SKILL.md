@@ -136,6 +136,42 @@ driver map**, marking overridden stages (e.g. `review: agent * ← was human`),
 then proceed — no confirmation prompt. Ignore (and note) any override targeting
 a skill-less cicd stage.
 
+### Change-key qualification (single- vs multi-product repos)
+
+This resolution ladder settles more than which product owns the change — it
+also settles this repo's **cardinality**, which gates every *prose* rendering
+of a change key from here on:
+
+- **Single-product repo** — the config fast path (rung 1) pinned one
+  `productId` outright, or the repo-linkage lookup (rung 2) returned exactly
+  one candidate before any narrowing was needed.
+- **Multi-product repo** — the repo-linkage lookup (rung 2) returned **more
+  than one** candidate, and rungs 3–5 narrowed to the one in scope for this
+  change.
+
+**The rule:** in a multi-product repo, every *prose* rendering of a change key
+that this pipeline authors — commit subject/body, PR title/body,
+`defprod-change-tracker` link/close write-backs, and any change-key mention
+inside the change record's own narrative content (the `intent` composed below,
+or the `design` field a stage skill records) — renders qualified,
+`<product-slug>/CHG-NN`. In a single-product repo, all of those render **bare**,
+`CHG-NN`, full stop. Echo which case applies once, alongside the product
+resolution (e.g. "3 products share this repo — change-key mentions qualify as
+`defprod/CHG-NN`" or "single product repo — change-key mentions stay bare"),
+then proceed without asking.
+
+**This does not govern the commit trailer or the branch name** — both stay
+unconditionally qualified whenever a product resolves (Step 4), unchanged
+since v1.7.0/v1.13.0: CI's stamping (`defprod-stamp.sh`) depends on that fixed
+form regardless of cardinality.
+
+**This is the single statement of the rule.** Persist the determination as
+`multiProduct` in the `.defprod/change` pin (Step 4) so stage skills read it
+rather than re-deriving cardinality themselves (most don't carry `listProducts`
+in their tool allowlist). Every site that renders a change key as prose
+cross-references this section rather than restating the policy — one edit
+here, not N.
+
 ### Step 2 — Fetch the ticket (intake)
 
 - **With a ticket ref/URL**: fetch it via the **`/defprod-change-tracker`**
@@ -151,7 +187,9 @@ accepted decision, not a paste of the ticket) and **confirm it with the user
 before creating anything**. Under **`--auto-all`**, skip this confirmation and
 the `accept` gate — the distilled intent is accepted as-is and recorded as the
 change's intent. `--auto` does **not** skip it: you still confirm *what* is
-being built.
+being built. If the intent text mentions another change (a duplicate, a
+superseded predecessor, a related sibling), render that mention per
+*Change-key qualification* above.
 
 ### Step 3 — Dedupe, then create the change
 
@@ -174,9 +212,12 @@ Make the change discoverable by stage skills and CI hooks:
 
 1. Write **`.defprod/change`** (git-ignored; add to `.gitignore` if needed) in
    the worktree root:
-   `{ "productId": "...", "changeId": "...", "changeKey": "CHG-NN", "productSlug": "..." }`
+   `{ "productId": "...", "changeId": "...", "changeKey": "CHG-NN", "productSlug": "...", "multiProduct": true|false }`
    (`productSlug` is the resolved product's slug from Step 1 — the land stage
-   uses it for the `Change: <slug>/CHG-NN` trailer without a round-trip.)
+   uses it for the `Change: <slug>/CHG-NN` trailer without a round-trip.
+   `multiProduct` is the cardinality determination from *Change-key
+   qualification* above — stage skills read it directly instead of
+   re-resolving cardinality.)
    **The pin is a lock, not a claim.** Before writing it, read any existing
    `.defprod/change` and check it: if it names a **different** change, `getChange`
    it — if that change is still **active** (not shipped/cancelled), this worktree

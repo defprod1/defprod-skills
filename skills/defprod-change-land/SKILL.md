@@ -26,7 +26,7 @@ trailer that CI/CD hooks use to stamp the remaining pipeline stages.
 ## Change context (stamping preamble)
 
 Resolve the current change context, in precedence order:
-1. `.defprod/change` in the worktree root — JSON `{ productId, changeId, changeKey, productSlug }`.
+1. `.defprod/change` in the worktree root — JSON `{ productId, changeId, changeKey, productSlug, multiProduct }`.
 2. A branch named `chg/<slug>/CHG-NN-*` (or legacy `chg/CHG-NN-*`) → resolve via `getChange { productId, key }`.
 3. A `Change: <product-slug>/CHG-NN` trailer on the HEAD commit → resolve the
    slug to a product, then `getChange { productId, key }`. Tolerate a legacy
@@ -103,7 +103,19 @@ you default to committing and stopping.
    trailer product-scoped so CI can resolve the right product in a multi-product
    monorepo (a bare `CHG-NN` key is only unique *within* a product). Every commit
    belonging to the change carries it — it survives squashes and cherry-picks and
-   is how CI resolves the change from a push range.
+   is how CI resolves the change from a push range. **The trailer is always
+   qualified this way, regardless of repo cardinality** — this is unchanged
+   since v1.7.0 and distinct from the rule below.
+
+   If the commit **subject or body** also mentions the change key (per the
+   repo's own conventions — this stage doesn't mandate a mention), render that
+   mention per the *Change-key qualification* rule in `defprod-change/SKILL.md`
+   (the `multiProduct` flag in the `.defprod/change` pin, or the resolved
+   context if there's no pin): qualified `<product-slug>/CHG-NN` in a
+   multi-product repo, bare `CHG-NN` in a single-product one. This is
+   independent of the trailer, which stays qualified either way — don't copy
+   the trailer's form into the subject/body without checking `multiProduct`
+   first.
 
 2. **Land per the repo's flow** — ask the user if ambiguous. For every merge or
    push **you** perform, stamp the matching stage on **both sides** of the
@@ -114,7 +126,12 @@ you default to committing and stopping.
    `cancelChangeStage` if you abandon it) — never finish a stage whose operation
    did not succeed.
    - **Branch/PR flow**: push the `chg/<slug>/CHG-NN-*` branch and open/hand off the
-     PR. The `merge` stage finishes when the PR merges — if you perform the
+     PR. If **you** compose the PR title/body, render any change-key mention
+     per the same *Change-key qualification* rule as the commit subject/body
+     (qualified in a multi-product repo, bare in a single-product one) — the
+     branch name itself stays qualified either way, per Step 4 of
+     `defprod-change/SKILL.md`. The `merge` stage finishes when the PR merges —
+     if you perform the
      merge, `startChangeStage { stage: 'merge' }` before it and
      `finishChangeStage { stage: 'merge' }` after; if the platform/CI performs
      it, its hook stamps both instead. `push` is typically redundant here

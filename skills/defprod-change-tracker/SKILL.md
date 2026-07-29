@@ -27,6 +27,14 @@ instructions and delete the examples you don't use.
 
 ## The three operations
 
+> **Change-key form.** The `changeKey` passed into `link`/`close` arrives
+> already rendered correctly for this repo — qualified `<product-slug>/CHG-NN`
+> in a multi-product repo, bare `CHG-NN` in a single-product one (the
+> *Change-key qualification* rule in `defprod-change/SKILL.md` is the single
+> source of truth). Write it into your tracker **as given** — don't reformat
+> or re-derive it. The worked examples below use `<changeKey>` as a
+> placeholder for this already-correct value.
+
 ### 1. `fetch(ref)` — read an accepted ticket
 
 Given a ticket reference or URL, obtain: **title**, **url**, and the material
@@ -37,7 +45,7 @@ already carries a DefProd change link (for dedupe).
 
 ### 2. `link(ref, changeKey)` — mark the ticket promoted
 
-Record the DefProd change key (e.g. `CHG-07`) on the ticket so a second
+Record the DefProd change key (e.g. `<changeKey>`) on the ticket so a second
 promotion attempt is caught at fetch time.
 
 **Your tracker:** _describe how to write the link here._
@@ -45,7 +53,7 @@ promotion attempt is caught at fetch time.
 ### 3. `close(ref, outcome)` — terminal write-back
 
 When the change ships or is cancelled, write the outcome back (e.g. a comment
-"Shipped as CHG-07" or a status flip).
+"Shipped as `<changeKey>`" or a status flip).
 
 **Your tracker:** _describe how to close out the ticket here._
 
@@ -61,7 +69,7 @@ frontmatter including `status:` and `link:` fields.
 - **fetch**: `Read` the intent file by ref (e.g. `INT0007` →
   `~/team-brain/intents/INT0007-*.md`). Title = H1; intent material = body.
   Already-promoted check: frontmatter `link:` is non-empty.
-- **link**: set frontmatter `link: CHG-NN` and `status: promoted`; commit.
+- **link**: set frontmatter `link: <changeKey>` and `status: promoted`; commit.
 - **close**: set `status: done` (or `dropped`), append an outcome line; commit.
 
 ### Example B — JIRA via an MCP connector
@@ -70,17 +78,17 @@ Assumes a JIRA/Atlassian MCP server is connected.
 
 - **fetch**: get the issue by key; title = summary, url = browse link, intent
   material = description + recent comments. Already-promoted check: look for a
-  `DefProd: CHG-NN` label or comment.
-- **link**: add a comment `Promoted to DefProd as CHG-NN` (or set a custom
+  `DefProd: <changeKey>` label or comment.
+- **link**: add a comment `Promoted to DefProd as <changeKey>` (or set a custom
   field / label if your project has one).
-- **close**: add a comment `Shipped as CHG-NN` / `Cancelled (CHG-NN)`; or
+- **close**: add a comment `Shipped as <changeKey>` / `Cancelled (<changeKey>)`; or
   transition the issue per your team's workflow.
 
 ### Example C — Notion via an MCP connector
 
 - **fetch**: read the page by URL/id; title = page title, intent material =
   page content. Already-promoted check: a `DefProd change` property.
-- **link**: set the `DefProd change` property to `CHG-NN`.
+- **link**: set the `DefProd change` property to `<changeKey>`.
 - **close**: set the page status property and append an outcome block.
 
 ---
