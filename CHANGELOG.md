@@ -4,6 +4,14 @@ All notable changes to `@defprod/skills` are documented here. The format roughly
 
 The **source of truth for release notes is the [GitHub Releases](https://github.com/defprod1/defprod-skills/releases) page** for this repository. Each entry below mirrors a GitHub Release; click the version heading to read the full body, including any breaking-change upgrade guidance.
 
+## [1.14.0] — 2026-07-29
+
+### Changed
+
+- **Change-key qualification now covers commit prose, PR text, and tracker write-backs — gated on repo cardinality.** Product-qualified change keys (`<product-slug>/CHG-NN`) previously covered only the commit trailer (v1.7.0) and the branch name (v1.13.0); every other human-readable rendering still fell back to a bare `CHG-NN`, which is ambiguous in a multi-product monorepo. `defprod-change/SKILL.md` now determines whether a repo hosts one product or several as part of its Step 1 resolution, states the qualification rule once, and persists it as `multiProduct` in the `.defprod/change` pin. `defprod-change-land` (commit subject/body, PR title/body), `defprod-change-tracker` (link/close write-backs), and `defprod-change-design` (recorded design text) all render qualified in a multi-product repo and bare in a single-product one. The commit trailer and branch name are unchanged — still unconditionally qualified whenever a product resolves, regardless of cardinality.
+
+See [v1.14.0 release notes](https://github.com/defprod1/defprod-skills/releases/tag/v1.14.0) for the full body.
+
 ## [1.13.0] — 2026-07-23
 
 ### Changed
@@ -204,6 +212,7 @@ See [v1.1.0 release notes](https://github.com/defprod1/defprod-skills/releases/t
 
 Initial public release.
 
+[1.14.0]: https://github.com/defprod1/defprod-skills/releases/tag/v1.14.0
 [1.12.0]: https://github.com/defprod1/defprod-skills/releases/tag/v1.12.0
 [1.11.1]: https://github.com/defprod1/defprod-skills/releases/tag/v1.11.1
 [1.11.0]: https://github.com/defprod1/defprod-skills/releases/tag/v1.11.0
