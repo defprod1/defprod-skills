@@ -80,13 +80,26 @@ mode given, default to **interactive**.
      in dependency order. **If that skill is not installed, fall back to
      walk-the-decisions** — never block on it.
 
-   **Floors override the size guess:** a persisted data-model change, a
-   migration, a billing / security / auth surface, or anything irreversible is
-   *never* quick-confirm (≥ walk-the-decisions, biased toward exhaustive); a
-   purely cosmetic change or a global-rule regression floors at quick-confirm.
-   When genuinely unsure in the middle, propose the **lighter** tier — escalation
-   is one sentence away. **Escalate or de-escalate mid-stream** if the discussion
-   reveals more (or less) than the proposed tier assumed.
+   **Floors override the size guess.** If the change carries a **risk
+   assessment** (`riskAssessment.category` on the record from `getChange`), that
+   category sets the floor: **`medium` or `high` → never quick-confirm** (≥
+   walk-the-decisions, biased toward exhaustive). Risk and depth are
+   **orthogonal** — risk asks *how bad is it if this goes wrong*, depth asks *how
+   ambiguous is the approach*. Adding an index to a billing collection is
+   high-risk with nothing to discuss; a novel interaction pattern is low-risk with
+   plenty. So the category sets only the **floor**; the tier above it stays the
+   propose-confirm judgement above, and a `low` category does not cap the tier.
+
+   If the change carries **no** assessment (older server, feature gated off, or a
+   standalone invocation), fall back to the trigger list: a persisted data-model
+   change, a migration, a billing / security / auth surface, or anything
+   irreversible is *never* quick-confirm.
+
+   Either way, the **cosmetic / global-rule-regression ceiling is unaffected by
+   the category**: a purely cosmetic change or a global-rule regression floors at
+   quick-confirm. When genuinely unsure in the middle, propose the **lighter**
+   tier — escalation is one sentence away. **Escalate or de-escalate mid-stream**
+   if the discussion reveals more (or less) than the proposed tier assumed.
 3. **Settle it with the user.** The design stage ends with an *agreed* design,
    not a proposed one.
 4. **Record it** on the change record (this skill records, whichever tier

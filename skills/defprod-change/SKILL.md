@@ -11,6 +11,8 @@ allowed-tools:
   - AskUserQuestion
   - mcp__defprod__listProducts
   - mcp__defprod__getProduct
+  - mcp__defprod__getEffectiveChangePipeline
+  - mcp__defprod__assessChangeRisk
   - mcp__defprod__createChange
   - mcp__defprod__listChanges
   - mcp__defprod__getChange
@@ -58,6 +60,13 @@ product's pipeline config says it should.
   the skill: `agent` → `autonomous` (run to completion, no questions),
   `human` → `interactive` (clarify as needed, and **never finish the stage
   without explicit human approval**). `cicd` hands the stage to CI/CD.
+- **Risk assessment** — a scored severity / occurrence / detection vector with
+  per-axis evidence, recorded on the change by `assessChangeRisk` (Step 5). The
+  **agent scores; the server resolves**: the *risk category* (`low` | `medium` |
+  `high`) is derived from the vector and is never an input. Assessment is an
+  activity *within* `accept`, not a pipeline stage. It is currently
+  **observe-only** — the category is recorded and reported, and does **not**
+  select the pipeline.
 - **Driver overlay** — a per-run `stage → driver` map the caller supplies at
   invocation that takes precedence over the product's `changePipeline` driver,
   **for this run only**. It is never written back to the product (no
@@ -198,7 +207,7 @@ For external tickets, check for an existing promotion first:
 2. Call `listChanges { productId, originSystem, originRef }`.
 
 If an **active** change exists → resume it (re-establish context, continue at
-Step 5) instead of creating a duplicate. If a **cancelled** one exists →
+Step 6) instead of creating a duplicate. If a **cancelled** one exists →
 prefer `reopenChange` over creating anew. The server independently rejects
 duplicate creation against active changes.
 
@@ -238,7 +247,71 @@ Make the change discoverable by stage skills and CI hooks:
 Then perform the **link write-back**: ask the adapter to mark the ticket
 promoted with the change key (`link` operation).
 
-### Step 5 — The stage loop
+### Step 5 — Assess the risk (an activity within `accept`)
+
+The change now exists and has an id, so score it. Assessment is an **activity
+within `accept`, never a pipeline stage** — as a stage, every later re-score
+would be a backward jump, and the backward-jump rule would wipe the stamps of
+design, define, code and everything after them, so re-assessing would destroy the
+record's own history. This step therefore calls no stage-action tool, moves no
+position, and disturbs no stamps.
+
+**If assessment is unavailable, skip it and continue.** `assessChangeRisk` is
+gated by a feature flag and exists only on servers new enough to carry it. A
+rejection — flag off, tool absent, insufficient scope — is **not** a pipeline
+failure: note it in one line and go to Step 6. Risk assessment never blocks
+change work.
+
+1. **Do the lookups before scoring.** `assessChangeRisk`'s own tool description
+   states what each axis's evidence must contain — read it and satisfy it rather
+   than guessing. An axis without evidence is rejected, because an unsupported
+   score is not an assessment. Two errors are worth naming because they invert
+   the outcome:
+   - **Detection is INVERTED** — `1` = certain to be caught before a customer
+     sees it, `10` = silent.
+   - **An unfamiliar subsystem scores occurrence HIGH, not low.** Unfamiliarity
+     is an argument for a high occurrence, never a reason to shrug one off.
+2. **Score what is knowable at `accept`, and be explicit about what is not.**
+   Here the change is still an intent string: no diff exists, so the modules
+   touched and the coverage over the changed path are unknown. This is the
+   **least-informed score the change will ever have** — expected, not a defect.
+   Use the prior art in this repo, `docs/rules` (or this repo's equivalent), and
+   the incident record for occurrence; for detection, say plainly that no diff
+   exists yet and name whatever coverage exists over the surface the intent
+   implicates — or record that none does. **Do not invent diff-level evidence you
+   cannot have at this point.**
+3. **Use the `core` overlay.** Whether a migration is involved is usually not
+   known at `accept`, so the initial assessment is scored against the core
+   anchors and omits `writeSet` / `sideEffects`. The `dbm` overlay — which
+   requires both declarations, empty arrays permitted but stated explicitly —
+   belongs to a later re-score, once a migration is known to be in play.
+4. **Never supply a category.** It is not an input: the server derives it from
+   the vector by a severity-weighted lookup and rejects a supplied one. The only
+   way to move the category is to move an axis **and** write the evidence for
+   that axis. Compute one locally to *report* if you wish — you simply cannot
+   assert one as stored truth.
+5. **Report the resolved category** from the response
+   (`riskAssessment.category`), with the vector and a one-line reason per axis.
+6. **Report the pipeline that category *would* select.** Call
+   `getEffectiveChangePipeline { productId, riskCategory }` for the resolved
+   category, and `getEffectiveChangePipeline { productId }` for the
+   category-blind pipeline in force today, then show the difference between them
+   — or state that there is none.
+
+**This is observe-only: risk does not select the pipeline.** Say so explicitly in
+the report, and then run Step 6 under the category-blind pipeline exactly as if
+no assessment had been made. The observe-only period exists to compare proposed
+categories against human judgement and recalibrate the anchors *before* the
+framework carries authority — so the value is in the assessment being recorded
+and read, not applied. Do not reshape the run around the category, and do not try
+to write a confirmed pipeline onto the change: `patchChange` refuses
+`confirmedPipeline` and `confirmedPipelineCategory` by design.
+
+Assessment needs no gate in any driver mode — nothing is applied, so there is
+nothing to approve. Report and continue under `--auto`, `--auto-all` and
+`--interactive` alike.
+
+### Step 6 — The stage loop
 
 Repeat until the pipeline ends or control leaves the agent:
 
@@ -248,7 +321,7 @@ Repeat until the pipeline ends or control leaves the agent:
    `.defprod/change` as `driverOverrides`) so the override is honoured every
    iteration and survives a resume.
 2. Determine the next enabled stage after the current position.
-   - No next stage → the change is shipped or at pipeline end; go to Step 6.
+   - No next stage → the change is shipped or at pipeline end; go to Step 7.
 3. Consult that stage's **driver** and act:
    - **`cicd`** → END the run. Report that the change is handed to the
      CI/CD pipeline (its hooks stamp `finishChangeStage` from here — see
@@ -282,7 +355,7 @@ Repeat until the pipeline ends or control leaves the agent:
 4. The stage skill stamps its own start/finish — the orchestrator never calls
    the stamping RPCs for stage work it delegated.
 
-### Step 6 — Terminal write-back
+### Step 7 — Terminal write-back
 
 When the change reaches `ship` finished (or is cancelled), ask the adapter to
 write the outcome back to the ticket (`close` operation). Best-effort: a
@@ -290,7 +363,7 @@ failed tracker write is reported, never blocking.
 
 On cancellation (`cancelChange`), also **delete `.defprod/change`** — a
 cancelled change is no longer hands-on in the worktree. (On `ship`, the pin was
-already cleared at the land hand-off, Step 5 / `change-land`.)
+already cleared at the land hand-off, Step 6 / `change-land`.)
 
 ## Rules
 
@@ -309,6 +382,19 @@ already cleared at the land hand-off, Step 5 / `change-land`.)
   not.)
 - **Never write lifecycle state via patch** — position moves only through the
   stage-action tools.
+- **Risk is scored, never asserted.** Supply severity / occurrence / detection
+  with per-axis evidence and let the server derive the category. Never send a
+  category, and never try to patch `riskAssessment`, `confirmedPipeline` or
+  `confirmedPipelineCategory` — `patchChange` refuses all three, deliberately: a
+  patchable category would restore exactly the assertable category the derivation
+  exists to remove.
+- **Risk assessment never blocks the pipeline.** It is an activity within
+  `accept`, not a stage — it moves no position and touches no stamps, and when
+  the tool is unavailable (flag off, older server) the run simply continues
+  without it.
+- **Observe-only, for now.** Report the resolved category alongside the pipeline
+  it *would* select, then proceed under the pipeline actually in force. Never
+  reshape a run around a category.
 - **One change at a time per worktree** — `.defprod/change` **locks** it: Step 4
   refuses to claim a tree already pinned to a *different active* change (override
   only with `--force`), so parallel changes cannot silently share a tree — they
