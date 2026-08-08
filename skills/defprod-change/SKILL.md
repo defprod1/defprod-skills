@@ -64,9 +64,9 @@ product's pipeline config says it should.
   per-axis evidence, recorded on the change by `assessChangeRisk` (Step 5). The
   **agent scores; the server resolves**: the *risk category* (`low` | `medium` |
   `high`) is derived from the vector and is never an input. Assessment is an
-  activity *within* `accept`, not a pipeline stage. It is currently
-  **observe-only** — the category is recorded and reported, and does **not**
-  select the pipeline.
+  activity *within* `accept`, not a pipeline stage, and is re-scored at the
+  `design` and `code` boundaries. It is currently **observe-only** — the category
+  is recorded and reported, and does **not** select the pipeline.
 - **Driver overlay** — a per-run `stage → driver` map the caller supplies at
   invocation that takes precedence over the product's `changePipeline` driver,
   **for this run only**. It is never written back to the product (no
@@ -354,6 +354,69 @@ Repeat until the pipeline ends or control leaves the agent:
      behaviour is identical because each stage skill stamps itself.
 4. The stage skill stamps its own start/finish — the orchestrator never calls
    the stamping RPCs for stage work it delegated.
+5. **If the stage that just finished was `design` or `code`, re-assess the risk**
+   before continuing the loop — see *Re-assessment at the design and code
+   boundaries* below. Then continue at 1.
+
+#### Re-assessment at the design and code boundaries
+
+Re-scoring is **mandatory at the end of `design`** — scope and approach are now
+known — and **at the end of `code`**, where the diff exists and the rubric can
+finally run its lookups for real. If either stage is disabled or skipped in this
+product's pipeline, its boundary simply doesn't exist; re-assess after each of the
+two that actually ran.
+
+It is the same `assessChangeRisk` call as Step 5, with the same evidence
+discipline and the same tolerance: if assessment is unavailable, note it in one
+line and carry on. Re-scoring is always safe — the current assessment is replaced,
+the full history is kept in the change's event trail, and no stage position or
+stamp is touched. **The orchestrator owns this**, not the stage skills: keeping it
+here means it still happens when a repo substitutes its own local override skill
+for a stage, and it cannot double-score. A stage skill invoked standalone
+therefore does not re-assess.
+
+Three things differ from the `accept`-time score:
+
+1. **The lookups are real now — do them properly.** At `code`-end especially, run
+   coverage over the changed paths and name the specific test that would fail on
+   the failure mode, or state plainly that none exists. This is the assessment the
+   earlier one was standing in for, so **do not carry forward `accept`-time
+   evidence strings the diff has since superseded** — rewrite them.
+2. **The overlay may change.** The initial score is always `core`, because whether
+   a migration is involved usually isn't known at `accept`. Once one is in play,
+   switch to the `dbm` overlay — at which point `writeSet` **and** `sideEffects`
+   are both required, empty arrays permitted but stated explicitly rather than
+   omitted, and reversibility is derived from those declarations and overrides your
+   authored value unless you record a justification.
+3. **Report the movement, not just the value.** Compare against the previous
+   category and say whether it rose, fell, or held.
+
+**Application is asymmetric — a ratchet on the band, not on individual axes.**
+Raising oversight is always safe to automate; lowering it is precisely what a
+human was consulted about.
+
+- **Category rose** → the earlier pipeline choice was made against a risk picture
+  now known to be wrong, so re-selection is **forced**: the stricter preset
+  applies and is **announced**, not asked about, in every driver mode.
+- **Category fell** → the pipeline **does not relax**. You may *propose*
+  relaxation to a human; you may never apply it, because an agent does not reduce
+  oversight below an explicit human choice. Under `--auto` / `--auto-all` a fall
+  is **recorded and ignored** — no prompt, no relaxation. A fall is often
+  legitimate and earned — adding a test that fails on the identified failure mode
+  is the cheapest way there is to lower detection — which is why falls travel the
+  proposal path rather than being discarded.
+
+**Under observe-only, both branches are reports.** Risk selects no pipeline today,
+so a forced re-selection currently means: state that the category rose, name the
+stricter pipeline the new category *would* select, and continue under the pipeline
+in force. Do not reshape the run, and do not try to record a confirmed pipeline —
+there is no write path for one. When selection is switched on, the rise branch
+becomes an applied change and the fall branch stays a proposal.
+
+One signal worth surfacing: if the category **rose to `medium` or `high` at
+`design`-end**, the design was conducted below the depth floor that category now
+implies, which is worth saying out loud because it suggests the approach may have
+been under-discussed. It does not retroactively re-run the design stage.
 
 ### Step 7 — Terminal write-back
 
@@ -391,7 +454,12 @@ already cleared at the land hand-off, Step 6 / `change-land`.)
 - **Risk assessment never blocks the pipeline.** It is an activity within
   `accept`, not a stage — it moves no position and touches no stamps, and when
   the tool is unavailable (flag off, older server) the run simply continues
-  without it.
+  without it. The same holds for every re-assessment.
+- **Re-assess at the `design` and `code` boundaries, and ratchet one way.** A
+  risen category forces the stricter pipeline and is announced; a fallen one is
+  only ever *proposed* to a human, never applied, and is recorded-and-ignored
+  under `--auto` / `--auto-all`. Raising oversight is safe to automate; lowering
+  it is the thing the human was consulted about.
 - **Observe-only, for now.** Report the resolved category alongside the pipeline
   it *would* select, then proceed under the pipeline actually in force. Never
   reshape a run around a category.
