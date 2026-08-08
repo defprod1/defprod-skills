@@ -4,6 +4,14 @@ All notable changes to `@defprod/skills` are documented here. The format roughly
 
 The **source of truth for release notes is the [GitHub Releases](https://github.com/defprod1/defprod-skills/releases) page** for this repository. Each entry below mirrors a GitHub Release; click the version heading to read the full body, including any breaking-change upgrade guidance.
 
+## [1.16.0] — 2026-08-09
+
+### Added
+
+- **Risk re-assessment at the `design` and `code` boundaries.** `defprod-change/SKILL.md` now re-scores the change at the end of `design` (scope and approach known) and at the end of `code` — the point the diff exists and the rubric's lookups can finally run for real, the `accept`-time score being the least-informed one a change ever gets. `accept`-time evidence is rewritten rather than carried forward, and the overlay can switch from `core` to `dbm` once a migration is known to be in play, which is where the write-set and side-effect declarations become required. Application is a one-way **ratchet on the band**: a risen category forces the stricter pipeline and is announced, while a fallen one is only ever proposed to a human and is recorded-and-ignored under `--auto` / `--auto-all`. Still observe-only, so both branches are reports today. Re-assessment lives in the orchestrator rather than the stage skills, so it survives a repo substituting its own stage skill and cannot double-score; a stage skill invoked standalone does not re-assess.
+
+See [v1.16.0 release notes](https://github.com/defprod1/defprod-skills/releases/tag/v1.16.0) for the full body.
+
 ## [1.15.0] — 2026-08-09
 
 ### Added
@@ -224,6 +232,7 @@ See [v1.1.0 release notes](https://github.com/defprod1/defprod-skills/releases/t
 
 Initial public release.
 
+[1.16.0]: https://github.com/defprod1/defprod-skills/releases/tag/v1.16.0
 [1.15.0]: https://github.com/defprod1/defprod-skills/releases/tag/v1.15.0
 [1.14.0]: https://github.com/defprod1/defprod-skills/releases/tag/v1.14.0
 [1.12.0]: https://github.com/defprod1/defprod-skills/releases/tag/v1.12.0
