@@ -4,6 +4,18 @@ All notable changes to `@defprod/skills` are documented here. The format roughly
 
 The **source of truth for release notes is the [GitHub Releases](https://github.com/defprod1/defprod-skills/releases) page** for this repository. Each entry below mirrors a GitHub Release; click the version heading to read the full body, including any breaking-change upgrade guidance.
 
+## [1.15.0] — 2026-08-09
+
+### Added
+
+- **Risk assessment in the change orchestrator, at the `accept` boundary.** `defprod-change/SKILL.md` gains a step that scores each new change on severity / occurrence / detection with per-axis evidence via `assessChangeRisk`, then reports the risk category the server derives from that vector alongside the pipeline that category *would* select. It is **observe-only**: the run continues under the pipeline actually in force, so the category is recorded and read rather than applied. Assessment is an activity *within* `accept`, never a pipeline stage — as a stage, every later re-score would be a backward jump that wiped the recorded stamps of design, define, code and everything after them. The agent scores and the server resolves: `category` is not an input, and supplying one is rejected. If assessment is unavailable (flag off, older server, insufficient scope) the orchestrator notes it and continues — it never blocks change work.
+
+### Changed
+
+- **The risk category sets the design-depth floor.** `defprod-change-design/SKILL.md` now floors a `medium` or `high` change at walk-the-decisions, replacing the hand-maintained trigger list, which is retained as the fallback for changes carrying no assessment. Risk and depth remain orthogonal, so the category sets only the floor; the cosmetic / global-rule-regression ceiling is unaffected by it.
+
+See [v1.15.0 release notes](https://github.com/defprod1/defprod-skills/releases/tag/v1.15.0) for the full body.
+
 ## [1.14.0] — 2026-07-29
 
 ### Changed
@@ -212,6 +224,7 @@ See [v1.1.0 release notes](https://github.com/defprod1/defprod-skills/releases/t
 
 Initial public release.
 
+[1.15.0]: https://github.com/defprod1/defprod-skills/releases/tag/v1.15.0
 [1.14.0]: https://github.com/defprod1/defprod-skills/releases/tag/v1.14.0
 [1.12.0]: https://github.com/defprod1/defprod-skills/releases/tag/v1.12.0
 [1.11.1]: https://github.com/defprod1/defprod-skills/releases/tag/v1.11.1
