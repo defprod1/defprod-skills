@@ -129,7 +129,7 @@ const KNOWN_MCP_TOOLS = [
   'listAreas', 'listProducts', 'listRepos', 'listUserStories',
   'createChange', 'listChanges', 'getChange', 'patchChange', 'deleteChange',
   'startChangeStage', 'finishChangeStage', 'cancelChangeStage', 'cancelChange', 'reopenChange',
-  'assessChangeRisk', 'getEffectiveChangePipeline',
+  'assessChangeRisk', 'confirmChangePipeline', 'getEffectiveChangePipeline',
   'moveArchitectureElement',
   'patchArchitectureElement', 'patchArea', 'patchBrief', 'patchProduct', 'patchRepo', 'patchUserStory',
 ];

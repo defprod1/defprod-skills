@@ -13,6 +13,7 @@ allowed-tools:
   - mcp__defprod__getProduct
   - mcp__defprod__getEffectiveChangePipeline
   - mcp__defprod__assessChangeRisk
+  - mcp__defprod__confirmChangePipeline
   - mcp__defprod__createChange
   - mcp__defprod__listChanges
   - mcp__defprod__getChange
@@ -67,6 +68,14 @@ product's pipeline config says it should.
   activity *within* `accept`, not a pipeline stage, and is re-scored at the
   `design` and `code` boundaries. It is currently **observe-only** — the category
   is recorded and reported, and does **not** select the pipeline.
+- **Pipeline confirmation** — freezing onto the change, in full, the pipeline its
+  category selected, via `confirmChangePipeline` (Step 5). The category is not an
+  input here either: the server reads it from the change's own assessment and
+  resolves the pipeline from it. A repo may declare bands it confirms
+  **automatically** (`low` by default), in which case `assessChangeRisk` performs
+  the confirmation itself and no separate call is wanted. Confirmation is a
+  *record of what was selected*, not authority: while assessment is observe-only
+  it changes nothing about how the change is actually driven.
 - **Driver overlay** — a per-run `stage → driver` map the caller supplies at
   invocation that takes precedence over the product's `changePipeline` driver,
   **for this run only**. It is never written back to the product (no
@@ -297,19 +306,53 @@ change work.
    category, and `getEffectiveChangePipeline { productId }` for the
    category-blind pipeline in force today, then show the difference between them
    — or state that there is none.
+7. **Confirm the pipeline** — freeze onto the change the pipeline its category
+   selected, so the record still answers *"what oversight did this change
+   receive?"* after the configuration has moved on.
+
+   **First check whether it is already done.** Where the repo auto-confirms the
+   resolved band — `low` unless it says otherwise — `assessChangeRisk` performed
+   the confirmation itself, and the response comes back with
+   `confirmedPipelineCategory` already set. Report that it was confirmed
+   automatically and **do not call `confirmChangePipeline`**; a second call would
+   add a duplicate entry to the change's history for a confirmation that did not
+   change. Auto-confirmation is the whole reason a routine change costs no human
+   touchpoint here — do not reintroduce one.
+
+   Otherwise the band needs confirming explicitly. Call
+   `confirmChangePipeline { changeId }`. Supply **no** category and **no**
+   pipeline: both are resolved server-side from the change's own assessment,
+   which is what stops a caller confirming lighter oversight than the evidence
+   earned. Pass per-stage `overrides` only if the repo has opted into them —
+   where it has not, supplying them is **rejected**, not ignored, so a refusal
+   naming `allowConfirmedPipelineOverride` means the repo is in its strict
+   default, not that you called it wrongly.
+
+   **Consent follows the driver, as everywhere else.** With a human in the loop
+   (default, and under `--auto`, which preserves the `accept` gate), present the
+   pipeline and confirm it with them before calling — this is the one moment
+   the design intends a human to see the oversight level before it is recorded.
+   Under `--auto-all`, confirm without prompting.
+
+   **If confirmation is unavailable, note it and continue**, exactly as for
+   assessment: the tool is gated by the same flag and exists only on servers new
+   enough to carry it. It never blocks change work.
 
 **This is observe-only: risk does not select the pipeline.** Say so explicitly in
 the report, and then run Step 6 under the category-blind pipeline exactly as if
 no assessment had been made. The observe-only period exists to compare proposed
 categories against human judgement and recalibrate the anchors *before* the
 framework carries authority — so the value is in the assessment being recorded
-and read, not applied. Do not reshape the run around the category, and do not try
-to write a confirmed pipeline onto the change: `patchChange` refuses
-`confirmedPipeline` and `confirmedPipelineCategory` by design.
+and read, not applied. Do not reshape the run around the category.
 
-Assessment needs no gate in any driver mode — nothing is applied, so there is
-nothing to approve. Report and continue under `--auto`, `--auto-all` and
-`--interactive` alike.
+A confirmed pipeline does **not** change this. It records *what the category
+selected*; the run still proceeds under the pipeline in force. Confirming and
+applying are separate, and only the first exists today.
+
+Assessment itself needs no gate in any driver mode — nothing is applied, so there
+is nothing to approve. Report and continue under `--auto`, `--auto-all` and
+`--interactive` alike. Confirmation is the exception noted above, because a human
+choosing an oversight level is the point of it.
 
 ### Step 6 — The stage loop
 
@@ -406,12 +449,27 @@ human was consulted about.
   is the cheapest way there is to lower detection — which is why falls travel the
   proposal path rather than being discarded.
 
-**Under observe-only, both branches are reports.** Risk selects no pipeline today,
-so a forced re-selection currently means: state that the category rose, name the
-stricter pipeline the new category *would* select, and continue under the pipeline
-in force. Do not reshape the run, and do not try to record a confirmed pipeline —
-there is no write path for one. When selection is switched on, the rise branch
-becomes an applied change and the fall branch stays a proposal.
+**Under observe-only, neither branch reshapes the run.** Risk selects no pipeline
+today, so a forced re-selection currently means: state that the category rose,
+name the stricter pipeline the new category *would* select, and continue under
+the pipeline in force. When selection is switched on, the rise branch becomes an
+applied change and the fall branch stays a proposal.
+
+**Re-confirm when the category moves, because the server invalidates.** A
+re-assessment that lands the change in a band the repo does *not* auto-confirm
+**clears** any existing confirmation — otherwise a change assessed `low`,
+auto-confirmed, then re-scored `high` at the `design` or `code` boundary would
+carry a record reading "low oversight confirmed" against high-risk work. So after
+a re-score that moved the category:
+
+- **Into an auto-confirmed band** → the server has already replaced the
+  confirmation. Report it; call nothing.
+- **Into any other band** → the confirmation is now cleared, and the change has
+  none. Confirm again per Step 5's step 7, with the same consent rule.
+
+This is what makes the rise branch's *"re-selection is forced"* concrete: the
+record is re-made against the risk picture now known to be right. It is still not
+authority — a confirmed pipeline records the selection and drives nothing.
 
 One signal worth surfacing: if the category **rose to `medium` or `high` at
 `design`-end**, the design was conducted below the depth floor that category now
@@ -450,7 +508,13 @@ already cleared at the land hand-off, Step 6 / `change-land`.)
   category, and never try to patch `riskAssessment`, `confirmedPipeline` or
   `confirmedPipelineCategory` — `patchChange` refuses all three, deliberately: a
   patchable category would restore exactly the assertable category the derivation
-  exists to remove.
+  exists to remove. The confirmation fields have their own write path,
+  `confirmChangePipeline`, which likewise derives rather than accepts the
+  category; patch is still never it.
+- **Never confirm a pipeline twice for the same selection.** Check whether
+  `assessChangeRisk` already auto-confirmed the band before calling
+  `confirmChangePipeline`. The change's history is an audit trail, and it should
+  carry one entry per confirmation that actually changed.
 - **Risk assessment never blocks the pipeline.** It is an activity within
   `accept`, not a stage — it moves no position and touches no stamps, and when
   the tool is unavailable (flag off, older server) the run simply continues
