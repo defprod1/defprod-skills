@@ -4,6 +4,20 @@ All notable changes to `@defprod/skills` are documented here. The format roughly
 
 The **source of truth for release notes is the [GitHub Releases](https://github.com/defprod1/defprod-skills/releases) page** for this repository. Each entry below mirrors a GitHub Release; click the version heading to read the full body, including any breaking-change upgrade guidance.
 
+## [1.17.0] — 2026-08-09
+
+### Added
+
+- **Pipeline confirmation at the `accept` boundary — the missing third of the risk rail.** `defprod-change/SKILL.md` now freezes onto the change, in full, the pipeline its risk category selected, via the new `confirmChangePipeline` RPC. This closes the gap that shipped with v1.15.0: that release specified *assess → report → confirm*, but only the first two thirds could be built, because nothing in the product could write `confirmedPipeline` and `patchChange` refuses it by design. The record is deliberately self-contained rather than a pointer at configuration, so it still answers *"what oversight did this change receive?"* after the repo's pipeline has been edited. As with scoring, the category is derived and never supplied — the server reads it from the change's own assessment — so a caller cannot confirm lighter oversight than the evidence earned.
+- **Auto-confirmed bands cost no human touchpoint.** Where a repo declares a band it confirms automatically (`low` unless it says otherwise), `assessChangeRisk` performs the confirmation itself and the orchestrator reports it rather than calling again — a second call would add a duplicate entry for a confirmation that did not change. This is what keeps a routine change free of a pipeline-confirmation prompt under `changeTrackingScope: all`, where every piece of work carries a record.
+
+### Changed
+
+- **A category move now re-confirms, because the server invalidates.** Re-assessment at the `design` and `code` boundaries (v1.16.0) can land a change in a band the repo does not auto-confirm, and the server then **clears** the existing confirmation rather than leaving it standing — otherwise a change assessed `low`, auto-confirmed, then re-scored `high` would carry a record reading "low oversight confirmed" against high-risk work. The orchestrator's rise branch therefore re-confirms, which is what makes v1.16.0's *"re-selection is forced"* concrete instead of purely narrative.
+- **Confirmation is where a human sees the oversight level.** Consent follows the driver as elsewhere: with a human in the loop — including under `--auto`, which preserves the `accept` gate — the pipeline is presented and confirmed before it is recorded; under `--auto-all` it is confirmed unprompted. Combined with auto-confirmed low bands, a human is asked only when a change is genuinely risky.
+
+Still **observe-only**: a confirmed pipeline records what the category *selected* and changes nothing about how the change is actually driven. Confirming and applying are separate, and only the first exists today. If confirmation is unavailable (flag off, older server) the orchestrator notes it and continues — it never blocks change work.
+
 ## [1.16.0] — 2026-08-09
 
 ### Added
