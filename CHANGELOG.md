@@ -4,6 +4,13 @@ All notable changes to `@defprod/skills` are documented here. The format roughly
 
 The **source of truth for release notes is the [GitHub Releases](https://github.com/defprod1/defprod-skills/releases) page** for this repository. Each entry below mirrors a GitHub Release; click the version heading to read the full body, including any breaking-change upgrade guidance.
 
+## [1.17.1] — 2026-08-09
+
+### Fixed
+
+- **A change stage run standalone no longer skips the installation's pipeline policy.** The six change-stage skills read `SKILL.local.md` from their own directory, but policy for the *whole* pipeline is recorded with the orchestrator (`defprod-change/SKILL.local.md`) — so invoking a stage directly (`/defprod-change-code` rather than `/defprod-change`) silently skipped it. The stage skills advertise standalone use, so this was a supported path, not misuse. It bit hardest on anything the installation binds to a change for its lifetime — a worktree or environment claimed for it, an isolated database, a running session — because those are claimed and released by orchestrator-level policy, leaving the claim behind after the change had shipped. Every stage skill now reads the orchestrator's local file as well.
+- **The land stage no longer instructs the wrong action on the worktree pin.** Step 4 said to *delete* `.defprod/change` on hand-off. Where tooling wrote that pin, deleting the file half-releases: the pin goes, the rest of the claim stays, and the next change finds the environment still held. Step 4 now says to clear the pin through whatever owns its lifecycle, and names where an installation records that it does.
+
 ## [1.17.0] — 2026-08-09
 
 ### Added
@@ -246,6 +253,7 @@ See [v1.1.0 release notes](https://github.com/defprod1/defprod-skills/releases/t
 
 Initial public release.
 
+[1.17.1]: https://github.com/defprod1/defprod-skills/releases/tag/v1.17.1
 [1.16.0]: https://github.com/defprod1/defprod-skills/releases/tag/v1.16.0
 [1.15.0]: https://github.com/defprod1/defprod-skills/releases/tag/v1.15.0
 [1.14.0]: https://github.com/defprod1/defprod-skills/releases/tag/v1.14.0
