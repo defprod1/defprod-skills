@@ -20,6 +20,17 @@ allowed-tools:
 > directory, read it now and fold it into the steps below. It records this
 > installation's local policies, additions, and overrides; where it conflicts
 > with the instructions here, the local file takes precedence.
+>
+> **Then read `defprod-change/SKILL.local.md` too, if it exists**, and apply the
+> parts that govern this stage. Installation policy for the *whole* pipeline is
+> recorded with the orchestrator, because that is the skill that owns the
+> pipeline — but this stage also runs standalone, and a stage that only read its
+> own directory would silently skip policy the installation considers mandatory.
+> That is a real failure mode, not a hypothetical: anything the setup binds to a
+> change for its lifetime — a worktree or environment claimed for it, a database,
+> a terminal session, an approval gate — is typically claimed and released by
+> orchestrator-level policy, so a standalone stage that ignores it leaves the
+> claim behind.
 
 # Change Stage: Test
 

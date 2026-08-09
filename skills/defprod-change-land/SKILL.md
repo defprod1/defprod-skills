@@ -17,6 +17,17 @@ allowed-tools:
 > directory, read it now and fold it into the steps below. It records this
 > installation's local policies, additions, and overrides; where it conflicts
 > with the instructions here, the local file takes precedence.
+>
+> **Then read `defprod-change/SKILL.local.md` too, if it exists**, and apply the
+> parts that govern this stage. Installation policy for the *whole* pipeline is
+> recorded with the orchestrator, because that is the skill that owns the
+> pipeline — but this stage also runs standalone, and a stage that only read its
+> own directory would silently skip policy the installation considers mandatory.
+> That is a real failure mode, not a hypothetical: anything the setup binds to a
+> change for its lifetime — a worktree or environment claimed for it, a database,
+> a terminal session, an approval gate — is typically claimed and released by
+> orchestrator-level policy, so a standalone stage that ignores it leaves the
+> claim behind.
 
 # Change Stage: Land (merge / push)
 
@@ -152,7 +163,7 @@ you default to committing and stopping.
 4. **Clear the worktree pin on hand-off.** Once your landing actions have
    succeeded — the push to origin (trunk flow: the deployable branch; branch/PR
    flow: the change branch, with the PR handed off) or a merge you performed —
-   and the change is handed to CI/CD or the platform, **delete
+   and the change is handed to CI/CD or the platform, **clear
    `.defprod/change`** — the worktree's hands-on role is over. The remaining
    stages (`build`/`package`/`staging`/`ship`) are stamped by CI/CD via the
    commit **trailer** deploy range (D24), never via the pin, so nothing
@@ -160,6 +171,16 @@ you default to committing and stopping.
    hands-on in this worktree* and frees the worktree for the next change without
    waiting for `ship`. If you only committed and **stopped** for consent (no
    push/merge performed), that is **not** a hand-off — leave the pin.
+
+   **Whose job is it to clear the pin?** Deleting the file is right only when
+   the pin was written by hand. If the installation's tooling wrote it, that
+   tooling owns the teardown — call *its* release step instead, so everything
+   else bound to the change (the worktree or environment, an isolated database,
+   a running session) is released along with the pin. Deleting the file directly
+   in that setup half-releases: the pin goes, the rest of the claim stays, and
+   the next change finds the environment still held. `defprod-change/SKILL.local.md`
+   is where an installation records that it owns the pin's lifecycle — which is
+   why the preamble above has you read it even on a standalone run.
 
 ## Rules
 
