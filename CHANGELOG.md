@@ -4,6 +4,14 @@ All notable changes to `@defprod/skills` are documented here. The format roughly
 
 The **source of truth for release notes is the [GitHub Releases](https://github.com/defprod1/defprod-skills/releases) page** for this repository. Each entry below mirrors a GitHub Release; click the version heading to read the full body, including any breaking-change upgrade guidance.
 
+## [1.18.0] — 2026-08-10
+
+### Added
+
+- **A third landing shape — local-merge trunk flow — and the rule that the trunk is never rebased.** `defprod-change-land` documented only Branch/PR flow and Trunk flow ("commit on the default branch"), so a repo that keeps a branch per change, merges it locally into the trunk and pushes from there had no procedure at all and improvised its integration of a diverged trunk. One such improvisation rebased the trunk, which rewrites the commits every outstanding change branch was cut from — merging any of them then re-attaches the originals beside their rewritten copies and the trunk carries each commit twice under two hashes. The failure is silent: it does not fail the land, it surfaces later as double-counted commits in release notes. Integration is now fast-forward, falling back to a merge commit, and the new section carries a portable pre-merge check (`git cherry main HEAD`), the recovery path when it objects — rebase *your branch*, never the trunk — and the caveat that patch-id comparison cannot see a copy altered by conflict resolution.
+
+See [v1.18.0 release notes](https://github.com/defprod1/defprod-skills/releases/tag/v1.18.0) for the full body.
+
 ## [1.17.1] — 2026-08-09
 
 ### Fixed
@@ -253,6 +261,7 @@ See [v1.1.0 release notes](https://github.com/defprod1/defprod-skills/releases/t
 
 Initial public release.
 
+[1.18.0]: https://github.com/defprod1/defprod-skills/releases/tag/v1.18.0
 [1.17.1]: https://github.com/defprod1/defprod-skills/releases/tag/v1.17.1
 [1.16.0]: https://github.com/defprod1/defprod-skills/releases/tag/v1.16.0
 [1.15.0]: https://github.com/defprod1/defprod-skills/releases/tag/v1.15.0
