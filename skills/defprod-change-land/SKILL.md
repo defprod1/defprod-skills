@@ -150,9 +150,58 @@ you default to committing and stopping.
    - **Trunk flow**: commit on the default branch; `merge` is typically
      disabled. `startChangeStage { stage: 'push' }`, push to origin, then
      `finishChangeStage { stage: 'push' }` on success.
+   - **Local-merge trunk flow**: a change branch, merged **locally** into the
+     trunk and pushed from there — no forge, so no PR to open. Both `merge` and
+     `push` are typically enabled: stamp `merge` around the local merge, then
+     `push` around the push of the trunk. Read *Integrating a diverged trunk*
+     below before you merge — this flow is the one the duplication trap bites.
 
    Only stamp stages that are enabled — a disabled stage is rejected by the
    server; treat that as "not my pipeline's stage", not an error.
+
+### Integrating a diverged trunk — never rewrite it
+
+When the trunk has moved on the remote, integrate it by **fast-forward, falling
+back to a merge commit**. Never rebase the trunk:
+
+```sh
+git fetch origin
+git merge --ff-only origin/main   # the usual case
+git merge origin/main             # only if --ff-only is refused
+```
+
+**Rebasing the trunk does not invalidate one branch — it invalidates every
+outstanding change branch at once.** Each was cut from the pre-rebase trunk and
+still carries the original commits, so merging any of them afterwards re-attaches
+those originals alongside their rewritten copies and the trunk ends up holding
+each commit **twice**, under two hashes. The damage is silent: it surfaces later
+as double-counted commits in release notes and anything else derived from a
+commit range, long after the land looks like it succeeded.
+
+The reflex fix — "rebase the trunk, then rebase my branch onto it" — only works
+when yours is the *only* branch outstanding. Where an installation runs changes
+concurrently in separate worktrees, the other branches cannot be repaired at
+all: git refuses to rebase a branch that is checked out elsewhere, and those
+trees hold uncommitted work. Rewriting the trunk is therefore never the answer;
+a merge bubble is the accepted cost.
+
+**Check before you merge.** This is portable and needs no tooling:
+
+```sh
+git cherry main HEAD   # '-' = patch already in main, '+' = genuinely new
+```
+
+Any `-` line means merging this branch would land that commit a second time —
+the trunk was rewritten after your branch was cut from it. **Do not merge.**
+Rebase **your branch** onto the current trunk (`git rebase main`, which drops the
+already-upstream commits) and re-check. Never rewrite the trunk to make the
+check pass.
+
+Two caveats worth knowing: `git cherry` compares patch content, so a copy whose
+content was altered by conflict resolution during the rebase has a different
+patch id and will **not** be flagged — a clean result means "no identical
+duplicates", not "no duplicates". And if the installation provides its own land
+preflight, prefer it; `SKILL.local.md` is where that is recorded.
 
 3. **Merge/push consent = the stage driver** (D14/D26). `agent` (autonomous) →
    merge/push **without prompting** (the driver config is the standing consent);
@@ -191,3 +240,7 @@ you default to committing and stopping.
   operations. The start stamp marks the landing as in progress; finish marks it
   done. (This supersedes any earlier "finish-only for quick operations"
   shortcut.)
+- **Never rebase the trunk to integrate it.** Fast-forward, or merge. Rebasing
+  it rewrites the commits every outstanding change branch was cut from, and
+  merging those branches afterwards duplicates history under new hashes — the
+  one failure in this stage that succeeds loudly and fails silently.
