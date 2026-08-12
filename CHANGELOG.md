@@ -4,6 +4,19 @@ All notable changes to `@defprod/skills` are documented here. The format roughly
 
 The **source of truth for release notes is the [GitHub Releases](https://github.com/defprod1/defprod-skills/releases) page** for this repository. Each entry below mirrors a GitHub Release; click the version heading to read the full body, including any breaking-change upgrade guidance.
 
+## [1.19.0] — 2026-08-13
+
+### Added
+
+- **The stage driver is reported, so a change record can finally answer what oversight it *received*.** The six change-stage skills pass `driver` when they stamp — `agent` in autonomous mode, `human` in interactive mode, the inverse of the driver-to-mode translation that got them there. The field has been on the server for a while with nothing writing it, so every stage read "not reported" and the record could only describe the oversight a change was *selected* for. First report wins, the value is never inferred from configuration, and a stamp refused by an older server is retried without the field rather than failing the stage. Nothing is backfilled: stages already stamped keep reading "not reported", because re-deriving a driver from the pipeline would fabricate the fact the comparison exists to expose.
+
+### Changed
+
+- **A change is driven by the pipeline its risk category selected, where its repository grants that authority.** The orchestrator's stage loop takes its driver map from the change's own `effectivePipeline` rather than resolving the product's configuration itself, and reports `effectivePipelineSource` — the confirmation, the current category, or the configuration. An older server that lacks the field falls back to the previous behaviour. The per-run driver overlay is unchanged and still sits on top, so `--auto` is autonomous whatever the category selected.
+- **Every observe-only instruction is gone.** The skills no longer assert that risk selects nothing: whether it does is a repository decision the server resolves and reports. A rise at the `design` or `code` boundary now genuinely tightens a run where authority has been granted, and still only names the stricter pipeline where it has not. A repository that has granted no authority behaves exactly as it did in v1.18.0.
+
+See [v1.19.0 release notes](https://github.com/defprod1/defprod-skills/releases/tag/v1.19.0) for the full body.
+
 ## [1.18.0] — 2026-08-10
 
 ### Added
@@ -261,6 +274,7 @@ See [v1.1.0 release notes](https://github.com/defprod1/defprod-skills/releases/t
 
 Initial public release.
 
+[1.19.0]: https://github.com/defprod1/defprod-skills/releases/tag/v1.19.0
 [1.18.0]: https://github.com/defprod1/defprod-skills/releases/tag/v1.18.0
 [1.17.1]: https://github.com/defprod1/defprod-skills/releases/tag/v1.17.1
 [1.16.0]: https://github.com/defprod1/defprod-skills/releases/tag/v1.16.0
