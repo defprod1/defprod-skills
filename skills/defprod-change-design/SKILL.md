@@ -58,6 +58,20 @@ the design is agreed. If the work is abandoned mid-stage, call
 `cancelChangeStage`. **If no context resolves, proceed silently** — stamping
 only applies when a change record is attached.
 
+**Report who drove the stage.** Pass `driver` when you stamp: `agent` in
+autonomous mode, `human` in interactive mode. That is the exact inverse of the
+driver-to-mode translation the orchestrator applied to get here, so the stamp
+records the oversight the stage *actually received* rather than what configuration
+expected of it. Invoked standalone with no mode, report `human` — you are being
+driven by the person who invoked you.
+
+Report it on `startChangeStage`; where the start was never reported, pass it on
+`finishChangeStage` instead. **First report wins**, and it is never inferred from
+configuration — a stage stamped without it reads honestly unknown, which is the
+point of recording it at all. An older server rejects the field: if a stamp is
+refused for that reason, retry without it rather than treating it as a stage
+failure.
+
 ## Execution mode (autonomous / interactive)
 
 The orchestrator passes a **mode** derived from this stage's `driver`:

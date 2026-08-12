@@ -51,10 +51,13 @@ product's pipeline config says it should.
   `CHG-07`, tracking intent, origin, and pipeline position.
 - **Pipeline** — the product's enabled stages, a subsequence of:
   accept → design → define → code → test → review → merge → push → build →
-  package → staging → ship. Read it from `getProduct` → `changePipeline`
-  (entries `{stage, enabled, driver}`; missing entries default to enabled with
-  default drivers: accept=human; design/define/code/test/review/merge/push=agent;
-  build/package/staging/ship=cicd).
+  package → staging → ship. For a change in flight, read the one it is actually
+  running under from `getChange` → `effectivePipeline`; the product's standing
+  configuration is `getProduct` → `changePipeline` (entries
+  `{stage, enabled, driver}`; missing entries default to enabled with default
+  drivers: accept=human; design/define/code/test/review/merge/push=agent;
+  build/package/staging/ship=cicd). The two differ exactly when the repository has
+  given the change's confirmed pipeline authority.
 - **Driver** — who executes a stage: `human`, `agent`, or `cicd`. The driver
   map IS the orchestration policy. For stages backed by an agent stage-skill,
   the orchestrator translates the driver into an execution **mode** it passes to
@@ -66,16 +69,21 @@ product's pipeline config says it should.
   **agent scores; the server resolves**: the *risk category* (`low` | `medium` |
   `high`) is derived from the vector and is never an input. Assessment is an
   activity *within* `accept`, not a pipeline stage, and is re-scored at the
-  `design` and `code` boundaries. It is currently **observe-only** — the category
-  is recorded and reported, and does **not** select the pipeline.
+  `design` and `code` boundaries. Whether the category **selects** the pipeline is
+  the repository's decision: where it grants confirmed pipelines authority, the
+  change runs under the one confirmed for it; where it does not, the category is
+  recorded and reported and selects nothing. You never have to work that out —
+  `getChange` reports the pipeline in force and which of the two it came from.
 - **Pipeline confirmation** — freezing onto the change, in full, the pipeline its
   category selected, via `confirmChangePipeline` (Step 5). The category is not an
   input here either: the server reads it from the change's own assessment and
   resolves the pipeline from it. A repo may declare bands it confirms
   **automatically** (`low` by default), in which case `assessChangeRisk` performs
   the confirmation itself and no separate call is wanted. Confirmation is a
-  *record of what was selected*, not authority: while assessment is observe-only
-  it changes nothing about how the change is actually driven.
+  *record of what was selected*. Whether it is also **authority** is the repo's
+  call: where the repo grants it, that frozen pipeline is what drives the change,
+  and a later config edit cannot reach the change in flight; where it does not,
+  the confirmation changes nothing about how the change is driven.
 - **Driver overlay** — a per-run `stage → driver` map the caller supplies at
   invocation that takes precedence over the product's `changePipeline` driver,
   **for this run only**. It is never written back to the product (no
@@ -301,10 +309,10 @@ change work.
    assert one as stored truth.
 5. **Report the resolved category** from the response
    (`riskAssessment.category`), with the vector and a one-line reason per axis.
-6. **Report the pipeline that category *would* select.** Call
+6. **Report the pipeline the category selects, and whether it governs.** Call
    `getEffectiveChangePipeline { productId, riskCategory }` for the resolved
-   category, and `getEffectiveChangePipeline { productId }` for the
-   category-blind pipeline in force today, then show the difference between them
+   category, and read `effectivePipeline` / `effectivePipelineSource` from the
+   change itself for what is actually in force, then show the difference between them
    — or state that there is none.
 7. **Confirm the pipeline** — freeze onto the change the pipeline its category
    selected, so the record still answers *"what oversight did this change
@@ -338,12 +346,17 @@ change work.
    assessment: the tool is gated by the same flag and exists only on servers new
    enough to carry it. It never blocks change work.
 
-**This is observe-only: risk does not select the pipeline.** Say so explicitly in
-the report, and then run Step 6 under the category-blind pipeline exactly as if
-no assessment had been made. The observe-only period exists to compare proposed
-categories against human judgement and recalibrate the anchors *before* the
-framework carries authority — so the value is in the assessment being recorded
-and read, not applied. Do not reshape the run around the category.
+**Whether any of this reshapes the run is the repository's decision, not yours to
+infer.** `getChange` reports `effectivePipelineSource` — `confirmed` (the frozen
+confirmation governs), `assessed` (no confirmation stands, so the stricter of the
+configuration and the current category governs), or `configuration` (the standing
+config governs, because the repo has not granted authority or the change carries no
+assessment). Report which one applies, in those terms, so the reader is never left
+guessing whether a category they can see actually gated the change.
+
+Where the source is `configuration`, say so plainly and run Step 6 exactly as if
+no assessment had been made — that is the calibration posture, in which the value
+is in the assessment being recorded and read rather than applied.
 
 A confirmed pipeline does **not** change this. It records *what the category
 selected*; the run still proceeds under the pipeline in force. Confirming and
@@ -358,11 +371,25 @@ choosing an oversight level is the point of it.
 
 Repeat until the pipeline ends or control leaves the agent:
 
-1. Fetch the change (`getChange`) and **re-read the pipeline config** — never
-   plan the whole run upfront; config and position may have changed. Then
-   **re-apply the run overlay** (the resolved overrides, persisted in
+1. Fetch the change (`getChange`) and **take the driver map from its
+   `effectivePipeline`** — the pipeline this change is actually running under,
+   already resolved by the server, with `effectivePipelineSource` naming which of
+   the three it came from. Re-read it **every iteration**: never plan the run
+   upfront, because the change's position, its assessment and the repo's policy
+   can all move underneath you — including the withdrawal of authority, which is
+   an emergency brake and must bite in flight.
+
+   Where `effectivePipeline` is **absent** — an older server that predates it —
+   fall back to the product's pipeline config (`getEffectiveChangePipeline`, or
+   `getProduct` → `changePipeline`) exactly as before, and treat the source as
+   `configuration`. Never synthesise the field from a repo setting yourself: the
+   ladder that produces it is the server's, and guessing it is how a run ends up
+   driven under a pipeline nobody selected.
+
+   Then **re-apply the run overlay** (the resolved overrides, persisted in
    `.defprod/change` as `driverOverrides`) so the override is honoured every
-   iteration and survives a resume.
+   iteration and survives a resume. The overlay is the caller's, so it still sits
+   on top — a `--auto` run is autonomous whatever the risk category selected.
 2. Determine the next enabled stage after the current position.
    - No next stage → the change is shipped or at pipeline end; go to Step 7.
 3. Consult that stage's **driver** and act:
@@ -449,11 +476,15 @@ human was consulted about.
   is the cheapest way there is to lower detection — which is why falls travel the
   proposal path rather than being discarded.
 
-**Under observe-only, neither branch reshapes the run.** Risk selects no pipeline
-today, so a forced re-selection currently means: state that the category rose,
-name the stricter pipeline the new category *would* select, and continue under
-the pipeline in force. When selection is switched on, the rise branch becomes an
-applied change and the fall branch stays a proposal.
+**Whether a rise reshapes the run depends on the repository, and you do not have
+to work it out.** Re-read `effectivePipeline` after the re-score: where the repo
+grants authority, a rise genuinely tightens the run — the confirmation it cleared
+drops the change onto the stricter of the configuration and its new category, so
+the remaining stages are driven under that from the next iteration onward, and you
+announce it rather than asking. Where the repo has not granted authority, the
+source stays `configuration`: state that the category rose, name the stricter
+pipeline it *would* have selected, and continue under the pipeline in force. The
+fall branch is a proposal in both cases.
 
 **Re-confirm when the category moves, because the server invalidates.** A
 re-assessment that lands the change in a band the repo does *not* auto-confirm
@@ -468,8 +499,9 @@ a re-score that moved the category:
   none. Confirm again per Step 5's step 7, with the same consent rule.
 
 This is what makes the rise branch's *"re-selection is forced"* concrete: the
-record is re-made against the risk picture now known to be right. It is still not
-authority — a confirmed pipeline records the selection and drives nothing.
+record is re-made against the risk picture now known to be right — and where the
+repo grants authority, re-confirming is also what puts the change back under a
+pipeline it has deliberately selected rather than the interim floor.
 
 One signal worth surfacing: if the category **rose to `medium` or `high` at
 `design`-end**, the design was conducted below the depth floor that category now
@@ -524,9 +556,10 @@ already cleared at the land hand-off, Step 6 / `change-land`.)
   only ever *proposed* to a human, never applied, and is recorded-and-ignored
   under `--auto` / `--auto-all`. Raising oversight is safe to automate; lowering
   it is the thing the human was consulted about.
-- **Observe-only, for now.** Report the resolved category alongside the pipeline
-  it *would* select, then proceed under the pipeline actually in force. Never
-  reshape a run around a category.
+- **The server decides whether risk selects the pipeline; you read the answer.**
+  Take the driver map from `getChange`'s `effectivePipeline` and report its
+  `effectivePipelineSource`. Never infer authority from a repo setting, and never
+  reshape a run around a category the server did not say was governing.
 - **One change at a time per worktree** — `.defprod/change` **locks** it: Step 4
   refuses to claim a tree already pinned to a *different active* change (override
   only with `--force`), so parallel changes cannot silently share a tree — they

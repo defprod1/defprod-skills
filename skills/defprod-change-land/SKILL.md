@@ -136,6 +136,15 @@ you default to committing and stopping.
    records completion. If the operation fails, leave the stage started (or
    `cancelChangeStage` if you abandon it) — never finish a stage whose operation
    did not succeed.
+
+   **Report who drove it.** Pass `driver` on the start stamp: `agent` in
+   autonomous mode, `human` in interactive mode — the inverse of the
+   driver-to-mode translation that set this stage's consent, so the stamp records
+   the oversight the merge or push *actually received*. A merge or push performed
+   by the platform or by CI is stamped by its own hook and reports its own driver;
+   never report one on its behalf. First report wins, it is never inferred from
+   configuration, and an older server that rejects the field means retry without
+   it — not a failed land.
    - **Branch/PR flow**: push the `chg/<slug>/CHG-NN-*` branch and open/hand off the
      PR. If **you** compose the PR title/body, render any change-key mention
      per the same *Change-key qualification* rule as the commit subject/body
