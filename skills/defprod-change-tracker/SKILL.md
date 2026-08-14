@@ -37,9 +37,21 @@ instructions and delete the examples you don't use.
 
 ### 1. `fetch(ref)` — read an accepted ticket
 
-Given a ticket reference or URL, obtain: **title**, **url**, and the material
-needed to distill an **intent** (what & why). Also report whether the ticket
-already carries a DefProd change link (for dedupe).
+Given a ticket reference or URL, obtain: **title**, **url**, the material
+needed to distill an **intent** (what & why), and the **origin** —
+`{ system, ref, url }`, the tracker-side address this work came from. Also
+report whether the ticket already carries a DefProd change link (for dedupe).
+
+**The origin is an output of `fetch`, not an afterthought at create time.**
+`system` names the tracker: a stable lowercase string (`jira`, `linear`,
+`brain`), the *same* one every time, because it is half of the dedupe key that
+catches a double promotion. `ref` is the ticket's own identifier, and `url` is
+the deep link, or null where the tracker has no addressable one.
+
+Return it whenever a ticket was fetched at all — it is what makes a promotion a
+two-way link rather than a one-way note in your tracker. It is **independent of
+`source`**: work the team raised in its own backlog is internal *and* has an
+origin.
 
 **Your tracker:** _describe how to fetch a ticket here._
 

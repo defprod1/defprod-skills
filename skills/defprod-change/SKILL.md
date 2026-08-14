@@ -229,8 +229,25 @@ prefer `reopenChange` over creating anew. The server independently rejects
 duplicate creation against active changes.
 
 Otherwise call `createChange` with `{ productId, title, type, intent,
-source: 'external' | 'internal', origin: { system, ref, url } }` (origin and
-`source: external` only for tracker-originated work).
+source: 'external' | 'internal', origin: { system, ref, url } }`.
+
+**`origin` and `source` are independent — never condition one on the other.**
+They answer different questions:
+
+- **`origin` — where is this work written down?** Pass the origin the adapter
+  returned from `fetch`, **whenever intake fetched a ticket at all**, whatever
+  its source. Omit it only for genuinely ad-hoc work — a bare invocation with
+  no ticket behind it — because there is then nothing to point at.
+- **`source` — did this work come from outside the team?** `external` for a
+  customer, a partner, an outside report; `internal` for the team's own
+  backlog. A team's own tracker is still a tracker, so `internal` **with** an
+  origin is the normal case, not a contradiction.
+
+A change promoted from a ticket but carrying no `origin` is a defect, not a
+tidy omission: the ticket records the change key, the change records nothing,
+and the change's own detail view has no origin to show. Treating
+`source: external` as the trigger for setting `origin` is the specific mistake
+that produces it.
 
 ### Step 4 — Establish the change context
 
@@ -263,6 +280,23 @@ Make the change discoverable by stage skills and CI hooks:
 
 Then perform the **link write-back**: ask the adapter to mark the ticket
 promoted with the change key (`link` operation).
+
+**Then confirm the link points both ways.** A promotion is one fact recorded in
+two places, and only one of them is a deliberate step — so the forward half is
+the half that goes missing. Re-read the change (`getChange`) and check its
+`origin` matches the ticket you just linked. If it is absent, the create call
+dropped it: repair it now with `patchChange` — `/origin` is patchable, unlike
+the lifecycle and provenance fields around it — rather than leaving a one-way
+record. If your client cannot pass nested arguments through an MCP tool call
+(some mangle objects in transit), reach for whatever direct RPC path the repo
+has instead of giving up and proceeding with no origin.
+
+**Do it here, at the boundary — not later.** This check is worth the round-trip
+because the repair window closes: a **shipped change is frozen**, and
+`patchChange` refuses it outright with no override. Nothing between here and
+ship catches a missing origin, so the change sails through, and by the time a
+human notices the empty origin on the change detail and asks where the work
+came from, the record can no longer be corrected at all.
 
 ### Step 5 — Assess the risk (an activity within `accept`)
 
