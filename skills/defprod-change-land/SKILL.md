@@ -8,6 +8,8 @@ allowed-tools:
   - Bash
   - AskUserQuestion
   - mcp__defprod__getChange
+  - mcp__defprod__getUserStory
+  - mcp__defprod__patchUserStory
   - mcp__defprod__startChangeStage
   - mcp__defprod__finishChangeStage
   - mcp__defprod__cancelChangeStage
@@ -240,6 +242,48 @@ preflight, prefer it; `SKILL.local.md` is where that is recorded.
    is where an installation records that it owns the pin's lifecycle — which is
    why the preamble above has you read it even on a standalone run.
 
+5. **Advance the delivered stories to `completed`.** A story is delivered when
+   the change carrying it lands — which is why this write belongs here and not
+   in the test stage, where the acceptance criteria are verified but nothing has
+   shipped yet. Run this **after** your landing actions have actually succeeded.
+   Skip it entirely if you only committed and **stopped** for consent, or if the
+   merge/push failed: nothing was delivered, so nothing may be marked delivered.
+   With **no change context**, skip it too.
+
+   For each story on the change's `userStoryIds`:
+
+   - `getUserStory` it and enumerate **every** acceptance criterion — not just
+     the ones this change was built to satisfy.
+   - Decide whether the story is now **wholly** delivered: each AC is either
+     satisfied by the work you just landed, or was already satisfied by
+     previously delivered behaviour. An AC that no code implements, or one
+     implemented but never verified by the test stage nor covered by existing
+     tests, leaves the story incomplete.
+   - **Wholly delivered** → patch it to `completed`:
+
+     ```
+     patchUserStory {
+       userStoryId: '<id>',
+       patch: [{ op: 'replace', path: '/status', value: 'completed' }],
+       comment: 'delivered by <product-slug>/CHG-NN'
+     }
+     ```
+
+     The call takes an **RFC 6902 patch array**, not a field bag — a bare
+     `{ status }` is rejected.
+   - **Partially delivered** → leave it at `inProgress` (patch it there the same
+     way if it is still `backlog` or `ready`) and **name the outstanding
+     acceptance criteria**
+     in your stage summary. A story can be in scope for several changes, and
+     completing it on the first change to touch it overstates delivery — which is
+     worse than leaving it open, because nothing later corrects it.
+
+   Write it **without prompting** in both autonomous and interactive mode, and
+   report every transition you made. Never move a story backwards. If the write
+   fails — an older server, a scope-limited key — report it and carry on: the
+   land has already succeeded and a status write must never turn it into a
+   failure.
+
 ## Rules
 
 - The trailer is non-negotiable when a change context exists — a landed change
@@ -253,3 +297,7 @@ preflight, prefer it; `SKILL.local.md` is where that is recorded.
   it rewrites the commits every outstanding change branch was cut from, and
   merging those branches afterwards duplicates history under new hashes — the
   one failure in this stage that succeeds loudly and fails silently.
+- **This stage owns the `→ completed` transition on a story's status**; the code
+  stage owns `→ inProgress`. No other stage writes it. Only a landed change may
+  complete a story, and only a story whose *every* acceptance criterion is met
+  may be completed.

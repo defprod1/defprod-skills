@@ -11,6 +11,7 @@ allowed-tools:
   - AskUserQuestion
   - mcp__defprod__getChange
   - mcp__defprod__getUserStory
+  - mcp__defprod__patchUserStory
   - mcp__defprod__startChangeStage
   - mcp__defprod__finishChangeStage
   - mcp__defprod__cancelChangeStage
@@ -95,15 +96,37 @@ confirmation" / "ask the user", that is the **interactive** path — in
    criteria) or the bug's root-cause notes. For non-trivial work (multiple
    modules, architectural decisions, 3+ stories), outline a plan and confirm
    with the user before coding.
-2. **Read before writing** — understand the existing code paths you are about
+2. **Mark the in-scope stories in progress.** For each story on the change's
+   `userStoryIds`, if its `status` is `backlog` or `ready`, set it to
+   `inProgress`:
+
+   ```
+   patchUserStory {
+     userStoryId: '<id>',
+     patch: [{ op: 'replace', path: '/status', value: 'inProgress' }],
+     comment: 'code stage of <product-slug>/CHG-NN'
+   }
+   ```
+
+   The call takes an **RFC 6902 patch array**, not a field bag — a bare
+   `{ status }` is rejected.
+
+   **Advance only forward.** Leave `inProgress`, `review`, `testing` and
+   `completed` exactly as they are — a story already further along, or already
+   delivered by an earlier change and now being extended, must never be dragged
+   backwards by this stage. Write it **without prompting** in both modes, and
+   name the transitions you made in your stage summary. With **no change
+   context**, skip this step. If the write fails, say so and carry on — it must
+   never fail the stage.
+3. **Read before writing** — understand the existing code paths you are about
    to modify.
-3. **Implement**, following the repo's conventions:
+4. **Implement**, following the repo's conventions:
    - Match existing coding style, architecture patterns, and naming.
    - Stay within story scope — flag discovered extra work to the user instead
      of silently expanding.
    - Keep changes minimal; for bug fixes, fix the root cause without
      refactoring around it.
-4. **Compile check**: run the project's build/compile verification
+5. **Compile check**: run the project's build/compile verification
    (`compileCheck` from `.defprod/defprod.json` if configured, else the
    standard build). Fix all errors — the stage is not finished until the
    project compiles clean.
@@ -114,3 +137,8 @@ confirmation" / "ask the user", that is the **interactive** path — in
   next stage's job, but obvious self-review happens here.
 - Don't introduce new frameworks, patterns, or dependencies without the user's
   agreement.
+- **This stage owns the `backlog`/`ready` → `inProgress` transition; the land
+  stage owns `→ completed`.** No other stage writes a story's status. The
+  pipeline stamps the change record meticulously, so a definition whose stories
+  never move is the one place the record and the product disagree — and it
+  disagrees in the direction that reports shipped work as unbuilt.
