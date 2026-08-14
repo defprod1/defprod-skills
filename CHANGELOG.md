@@ -4,6 +4,18 @@ All notable changes to `@defprod/skills` are documented here. The format roughly
 
 The **source of truth for release notes is the [GitHub Releases](https://github.com/defprod1/defprod-skills/releases) page** for this repository. Each entry below mirrors a GitHub Release; click the version heading to read the full body, including any breaking-change upgrade guidance.
 
+## [1.19.1] — 2026-08-15
+
+### Added
+
+- **The code and land stages now advance an in-scope user story's `status`, so a definition stops reporting shipped work as unbuilt.** Nothing in the pipeline ever wrote the field: the change record was stamped meticulously while the stories it was built from stayed exactly where they started, and the only writer was whoever created the story by hand. One team found 28 stories across two areas still reading `backlog`/`ready` months after the work shipped and deployed. The transition splits by what each stage can actually know — `defprod-change-code` owns `backlog`/`ready` → `inProgress`, and `defprod-change-land` owns → `completed`, because a story is delivered when the change carrying it lands (the test stage verifies every AC but nothing has shipped yet; a CD ship hook has the delivery fact and no AC knowledge). Only a **wholly** delivered story completes: land enumerates every AC of each linked story, not just the ones this change targeted, and otherwise holds at `inProgress` and names the outstanding ones — a story can be in scope for several changes, and completing it on the first one to touch it overstates delivery, which is worse than leaving it open because nothing later corrects it. Both writes are made silently and reported rather than prompted (the failure being fixed is stories rotting through inaction, so a confirmation is one more place for the write not to happen), both are forward-only so a `completed` story being extended is never dragged backwards, and neither can fail the stage it runs in.
+
+### Fixed
+
+- **A change promoted from a ticket records where it came from.** The origin was never an output of intake — the word appeared nowhere in `defprod-change-tracker`, whose `fetch` contract named only title, url and intent material, and its one mention in `defprod-change` tied it to `source: external`. So work tracked in a team's own backlog (internal, carrying an origin — the normal case) read as work that should have none, and the promotion recorded the change key on the ticket while the change recorded nothing. `fetch` now returns `origin: { system, ref, url }` independently of `source`, Step 3 separates the two questions they answer, and Step 4 confirms the link points both ways after the write-back — at that boundary specifically, because a shipped change is frozen and the repair window closes before anyone notices.
+
+See [v1.19.1 release notes](https://github.com/defprod1/defprod-skills/releases/tag/v1.19.1) for the full body.
+
 ## [1.19.0] — 2026-08-13
 
 ### Added
@@ -274,6 +286,7 @@ See [v1.1.0 release notes](https://github.com/defprod1/defprod-skills/releases/t
 
 Initial public release.
 
+[1.19.1]: https://github.com/defprod1/defprod-skills/releases/tag/v1.19.1
 [1.19.0]: https://github.com/defprod1/defprod-skills/releases/tag/v1.19.0
 [1.18.0]: https://github.com/defprod1/defprod-skills/releases/tag/v1.18.0
 [1.17.1]: https://github.com/defprod1/defprod-skills/releases/tag/v1.17.1
