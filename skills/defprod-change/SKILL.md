@@ -13,6 +13,7 @@ allowed-tools:
   - mcp__defprod__getProduct
   - mcp__defprod__getEffectiveChangePipeline
   - mcp__defprod__assessChangeRisk
+  - mcp__defprod__recordChangeDefect
   - mcp__defprod__confirmChangePipeline
   - mcp__defprod__createChange
   - mcp__defprod__listChanges
@@ -460,7 +461,49 @@ Repeat until the pipeline ends or control leaves the agent:
    the stamping RPCs for stage work it delegated.
 5. **If the stage that just finished was `design` or `code`, re-assess the risk**
    before continuing the loop — see *Re-assessment at the design and code
-   boundaries* below. Then continue at 1.
+   boundaries* below.
+6. **If the stage that just finished was `code` and the change is a `bug`,
+   classify the defect it repaired** — see *Defect classification after `code`*
+   below. Then continue at 1.
+
+#### Defect classification after `code`
+
+A `bug` change repaired a defect. Record what kind it was, with
+`recordChangeDefect`, once the diff exists.
+
+**An activity, never a pipeline stage** — for the same reason risk assessment is
+one. It calls no stage-action tool, moves no position and disturbs no stamps.
+Anchored to the `code` boundary rather than to a stage because pipelines are
+per-band configurable: hanging it off `review` would skip it for exactly the
+low-risk changes whose defect data is most worth having.
+
+**After `code`, not at `accept`.** Half the fields need the diff — what had to be
+fixed, and the nature of the mistake, are fiction before the fix exists.
+
+**It never blocks.** A tool that is absent, refused, or on a server too old is one
+line of note and then carry on. Nothing here may stop a fix shipping.
+
+1. **One classification, the most severe defect.** Where the fix repaired
+   several, rank by who they affected — customer beats staff beats developer —
+   and break ties by impact severity. Record that one and let the rest go. The
+   number this produces is *customer-facing defects*, not *defects*.
+2. **Score impact severity on the risk rubric's Severity anchors**, the same ones
+   used to predict a change's severity, and **within the audience you named**.
+   The anchors assume a customer, so a staff-only defect that breaks a core admin
+   workflow reads as an 8 and overstates its business impact badly.
+3. **`foundBy` is what actually exposed it**, not what should have. It is the
+   cheapest field here — you already know how you found the bug — and the one
+   that says which gate is worth investing in.
+4. **Give the commit, not the change.** `git bisect` / `git log -S` / `blame`
+   returns a SHA; pass it as `introducedInCommit`, pass that commit's `Change:`
+   trailer as `introducedInCommitTrailer`, and let the server derive the change
+   link and the dormancy. Do not look a change up yourself. Where the defect is in
+   code that never worked there is no introducing commit — record `age: base` and
+   omit both rather than guessing.
+5. **It can be amended after ship**, unlike every other content field. Realised
+   impact is often only learned once a customer explains what actually happened,
+   so a later correction is the system working; the history is kept in the change
+   event trail.
 
 #### Re-assessment at the design and code boundaries
 
