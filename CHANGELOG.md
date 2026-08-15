@@ -4,6 +4,18 @@ All notable changes to `@defprod/skills` are documented here. The format roughly
 
 The **source of truth for release notes is the [GitHub Releases](https://github.com/defprod1/defprod-skills/releases) page** for this repository. Each entry below mirrors a GitHub Release; click the version heading to read the full body, including any breaking-change upgrade guidance.
 
+## [1.20.0] — 2026-08-16
+
+### Added
+
+- **A `bug` change is now asked what kind of defect it repaired.** The change stage loop gains a numbered step after `code` that classifies the defect via `recordChangeDefect` — who it affected, how severe the impact was and on what evidence, how it was found, what had to be fixed, the nature of the mistake, and how old the code was. The classification is the *realised* counterpart of the risk assessment: impact severity is scored on the same Severity anchors used to *predict* a change's severity, so "did the changes we scored Low actually cause anything?" becomes a subtraction rather than a mapping table somebody has to invent. It exists as a numbered step rather than merely a field because the field already existed and nobody filled it in — the backend's causal link had been writable and server-validated for months and was populated on **0 of 183** bug changes in production, while `riskAssessment` (far more complex, equally advisory, but carrying a named tool, a numbered step and a UI section) sat at **93.5%**. Complexity was never the barrier; prompt was. The step is an activity rather than a pipeline stage, anchored to the `code` boundary because pipelines are per-band configurable and hanging it off `review` would skip exactly the low-risk changes whose defect data is most worth having — and it never blocks: a tool that is absent, refused, or on a server too old is one line of note and the fix ships anyway.
+
+### Fixed
+
+- **The skill verifier recognises `recordChangeDefect`.** Its MCP cross-reference list is hand-maintained, so a skill referencing a genuinely new server tool failed verification until the list caught up.
+
+See [v1.20.0 release notes](https://github.com/defprod1/defprod-skills/releases/tag/v1.20.0) for the full body.
+
 ## [1.19.1] — 2026-08-15
 
 ### Added
@@ -286,6 +298,7 @@ See [v1.1.0 release notes](https://github.com/defprod1/defprod-skills/releases/t
 
 Initial public release.
 
+[1.20.0]: https://github.com/defprod1/defprod-skills/releases/tag/v1.20.0
 [1.19.1]: https://github.com/defprod1/defprod-skills/releases/tag/v1.19.1
 [1.19.0]: https://github.com/defprod1/defprod-skills/releases/tag/v1.19.0
 [1.18.0]: https://github.com/defprod1/defprod-skills/releases/tag/v1.18.0
