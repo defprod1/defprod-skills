@@ -4,6 +4,14 @@ All notable changes to `@defprod/skills` are documented here. The format roughly
 
 The **source of truth for release notes is the [GitHub Releases](https://github.com/defprod1/defprod-skills/releases) page** for this repository. Each entry below mirrors a GitHub Release; click the version heading to read the full body, including any breaking-change upgrade guidance.
 
+## [1.20.1] — 2026-08-19
+
+### Changed
+
+- **The trailer stage ceiling is now a stated convention in the published skills, not only a mechanism in `@defprod/scripts`.** `defprod-change-design` says that a committed design doc must suffix its trailer with `:design`, because an unsuffixed trailer on an interim commit claims the whole change permanently and every later deploy range re-reads that claim. `defprod-change-land` states the complement: land emits the trailer unsuffixed, because land *is* the landing. Both include the `supports-trailer-stage-ceiling` version probe, since an older `defprod-stamp` truncates a suffix and silently restores the defect it exists to prevent. The design skill also records what a suffix is *not* — a guarantee — and points at the server-side guard that is.
+
+See [v1.20.1 release notes](https://github.com/defprod1/defprod-skills/releases/tag/v1.20.1) for the full body.
+
 ## [1.20.0] — 2026-08-16
 
 ### Added
@@ -329,3 +337,4 @@ Initial public release.
 [1.1.1]: https://github.com/defprod1/defprod-skills/releases/tag/v1.1.1
 [1.1.0]: https://github.com/defprod1/defprod-skills/releases/tag/v1.1.0
 [1.0.0]: https://github.com/defprod1/defprod-skills/releases/tag/v1.0.0
+[1.20.1]: https://github.com/defprod1/defprod-skills/releases/tag/v1.20.1
