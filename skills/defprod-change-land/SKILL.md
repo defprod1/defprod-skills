@@ -130,6 +130,17 @@ you default to committing and stopping.
    the trailer's form into the subject/body without checking `multiProduct`
    first.
 
+   **This stage emits the trailer UNSUFFIXED.** The trailer accepts an optional
+   stage ceiling, `Change: <product-slug>/CHG-NN:<stage>`, meaning *this commit is
+   entitled to advance the change no further than `<stage>`*. Land does not use it:
+   land IS the landing, so the change genuinely reaches whatever CI later reports.
+
+   Every OTHER stage that commits an artefact must suffix with its own stage — see
+   the trailer-ceiling rule in `defprod-change-design/SKILL.md`. The asymmetry is
+   the point: a suffix on the landing would stop CI advancing the change at all,
+   and its absence on an interim commit lets that commit claim the whole change
+   forever.
+
 2. **Land per the repo's flow** — ask the user if ambiguous. For every merge or
    push **you** perform, stamp the matching stage on **both sides** of the
    operation: `startChangeStage { stage }` immediately before you begin, then

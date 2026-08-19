@@ -141,6 +141,49 @@ mode given, default to **interactive**.
      (`multiProduct` from the resolved context above): qualified in a
      multi-product repo, bare in a single-product one.
 
+### If you COMMIT the design doc, cap the trailer at this stage
+
+Writing a doc to `designDocPath` leaves a file in the repo, and somebody — an
+agent following this prose, or a person by hand — may commit it. A commit is
+permanent, and so is a `Change:` trailer on it, so an unsuffixed trailer on an
+interim commit claims the whole change **forever**: every later deploy range that
+re-includes that commit re-reads the claim, and the change can be walked to `ship`
+by a commit that delivered nothing.
+
+That is not hypothetical. It happened to a high-risk change, twice on one record,
+while a reviewer was mid-review.
+
+**So if you commit the design doc, suffix the trailer with this stage:**
+
+```
+Change: <product-slug>/CHG-NN:design
+```
+
+meaning *this commit may advance the change no further than `design`*. A report
+beyond every declared ceiling is recorded as having had no effect — the change is
+neither advanced nor moved back to the ceiling. Only `defprod-change-land` emits
+the trailer unsuffixed, because land IS the landing.
+
+**Probe for support before writing a suffix.** An older `defprod-stamp` truncates
+it and treats the commit as delivering the change in full — the dangerous
+direction of skew, because it silently restores the very defect the suffix exists
+to prevent:
+
+```bash
+defprod-stamp --help 2>&1 | grep -q 'supports-trailer-stage-ceiling' \
+    && echo "suffix supported" || echo "omit the suffix"
+```
+
+If the marker is absent, **write the plain trailer**. An unsuffixed trailer is
+wrong only for interim commits; a truncated suffix is wrong in a way nobody can
+see.
+
+**A suffix is a mitigation, not the guarantee.** It only reaches commits made by
+something that follows this instruction — a commit a person makes by hand will
+never carry one. The durable protection is server-side: the change record refuses
+a second advance of the same stage from the same commit, and remembers that across
+a repair.
+
 ## Rules
 
 - Design is **skippable** — if the orchestrator or user deems the change too
