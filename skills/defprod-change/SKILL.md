@@ -431,9 +431,25 @@ Repeat until the pipeline ends or control leaves the agent:
    - **`cicd`** → END the run. Report that the change is handed to the
      CI/CD pipeline (its hooks stamp `finishChangeStage` from here — see
      `defprod-stamp.sh` in defprod-scripts).
-   - **`agent`** or **`human`** on a **skill-backed** stage → invoke the stage's
+   - **`agent`** or **`human`** on a **skill-backed** stage → **call
+     `startChangeStage { changeId, stage, driver }` yourself, immediately before
+     dispatching**, passing the overlay-resolved `driver` — then invoke the stage's
      skill, passing the change type **and the mode**: `agent` → `mode=autonomous`,
-     `human` → `mode=interactive`. In interactive mode the skill keeps the human
+     `human` → `mode=interactive`.
+
+     **Why the orchestrator stamps the start, when the skill stamps it too.** Only
+     the stage skills used to call it, so a skill that was substituted, run
+     standalone, or bypassed left no start time and no trace that one was owed. A
+     stage with no start does not merely read as unknown: it contributes to
+     **neither** the work nor the wait half of the stage-time breakdown, so it
+     vanishes from the analytics entirely — and because nothing refuses the finish,
+     the gap accrues silently for as long as the harness keeps misbehaving. Measured
+     across a real deployment it reached a double-digit percentage of all finished
+     stages. This is **added, not moved**: the stage skills keep their own start
+     stamp because they are documented as working standalone. Double-stamping is
+     free — the tool contract is first-write-wins — and the orchestrator is also the
+     only party that knows the per-run driver overlay, so its stamp is the one that
+     can report the driver correctly. In interactive mode the skill keeps the human
      in the loop and will **not** `finishChangeStage` without explicit approval,
      so a human gate is honoured *inside* the stage — not by stopping the loop
      before it. (This replaces the earlier "human → stop the loop" rule: the
@@ -455,10 +471,19 @@ Repeat until the pipeline ends or control leaves the agent:
      | build, package, staging, ship | no skill — cicd territory |
 
      **Capability dispatch**: if the repo has a local override skill for the
-     stage (e.g. a project-specific `change-test`), prefer it — stamping
-     behaviour is identical because each stage skill stamps itself.
-4. The stage skill stamps its own start/finish — the orchestrator never calls
-   the stamping RPCs for stage work it delegated.
+     stage (e.g. a project-specific `change-test`), prefer it. An override skill
+     **must stamp the stage it runs**, exactly as the standard stage skills do —
+     `startChangeStage` on entry and `finishChangeStage` when the stage's
+     done-condition is met, reporting `driver`. This is an obligation on the
+     override, not a property you may assume of it: the orchestrator's own start
+     stamp above covers the start, but nothing else covers the finish, so an
+     override that does not stamp leaves the change parked at a stage it has
+     actually completed.
+4. The stage skill stamps its own start and finish as well. The orchestrator
+   stamps only the **start**, per step 3 — it never calls `finishChangeStage` for
+   stage work it delegated, because only the skill knows whether the stage's
+   done-condition was actually met (and, in interactive mode, whether the human
+   approved it).
 5. **If the stage that just finished was `design` or `code`, re-assess the risk**
    before continuing the loop — see *Re-assessment at the design and code
    boundaries* below.
