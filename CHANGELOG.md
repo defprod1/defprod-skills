@@ -4,6 +4,16 @@ All notable changes to `@defprod/skills` are documented here. The format roughly
 
 The **source of truth for release notes is the [GitHub Releases](https://github.com/defprod1/defprod-skills/releases) page** for this repository. Each entry below mirrors a GitHub Release; click the version heading to read the full body, including any breaking-change upgrade guidance.
 
+## [1.21.0] — 2026-08-24
+
+### Changed
+
+- **The orchestrator now stamps a stage's start before dispatching it, so a stage can no longer be finished with no record of when it began.** Only the stage skills called `startChangeStage`, so a skill that was substituted, run standalone, or bypassed left no start time and no trace that one was owed. That is worse than it sounds: a stage with no `startedAt` contributes to *neither* the work nor the wait half of the stage-time breakdown, so it vanishes from delivery analytics entirely rather than reading as unmeasured — and because nothing refuses the finish, the gap accrues silently for as long as the harness misbehaves. Measured across a real deployment it reached a double-digit percentage of all finished stages. The stage loop now calls `startChangeStage` itself immediately before dispatch, passing the **overlay-resolved** driver, which it alone can know since the per-run overlay never reaches the server. This is **added, not moved** — the stage skills keep their own start stamp because they are documented as working standalone and would otherwise lose it when invoked directly, and double-stamping costs nothing under a first-write-wins contract. Step 4 is corrected to match: the orchestrator stamps only the start, and still never finishes delegated stage work, because only the skill knows whether the done-condition was met and whether a human approved it.
+- **An override skill now carries an explicit obligation to stamp the stage it runs.** The capability-dispatch note used to reassure ("stamping behaviour is identical because each stage skill stamps itself"); it now states the requirement. The orchestrator's own start stamp covers the start, but nothing covers the finish, so an override that does not stamp leaves the change parked at a stage it has actually completed.
+- **Enumerated values are explicitly allowed in acceptance criteria.** "Acceptance criteria state capability, not implementation" was being read as forbidding the values themselves, which makes a criterion untestable exactly where the capability *is* a fixed set of states. "Records whether the time was measured, corrected, recovered or inferred" is checkable; "records the time's provenance" hides the set. The field holding the values is still implementation and still stays out.
+
+See [v1.21.0 release notes](https://github.com/defprod1/defprod-skills/releases/tag/v1.21.0) for the full body.
+
 ## [1.20.1] — 2026-08-19
 
 ### Changed
@@ -338,3 +348,4 @@ Initial public release.
 [1.1.0]: https://github.com/defprod1/defprod-skills/releases/tag/v1.1.0
 [1.0.0]: https://github.com/defprod1/defprod-skills/releases/tag/v1.0.0
 [1.20.1]: https://github.com/defprod1/defprod-skills/releases/tag/v1.20.1
+[1.21.0]: https://github.com/defprod1/defprod-skills/releases/tag/v1.21.0
