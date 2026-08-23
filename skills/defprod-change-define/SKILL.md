@@ -133,3 +133,9 @@ confirmation" / "ask the user", that is the **interactive** path — in
 - Story changes are always **confirmed with the user** before they are written.
 - Acceptance criteria state capability, not implementation — keep routes,
   config keys, and file paths out of them.
+- **Enumerated values are the exception, and belong in the criterion.** Where a
+  capability turns on a fixed set of states, name the values or describe them in
+  prose — either is fine. "Records whether the time was measured, corrected,
+  recovered or inferred" is testable; "records the time's provenance" hides the
+  set and is not. The set IS the capability, so leaving it out removes the
+  contract rather than the implementation detail.
