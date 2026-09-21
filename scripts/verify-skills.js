@@ -127,7 +127,7 @@ const KNOWN_MCP_TOOLS = [
   'getArchitectureForProduct', 'getArchitectureTree', 'getArea',
   'getBriefForProduct', 'getProduct', 'getRepo', 'getUserStory',
   'listAreas', 'listProducts', 'listRepos', 'listUserStories',
-  'createChange', 'listChanges', 'getChange', 'patchChange', 'deleteChange',
+  'createChange', 'listChanges', 'listTeamChanges', 'getChange', 'patchChange', 'deleteChange',
   'startChangeStage', 'finishChangeStage', 'cancelChangeStage', 'cancelChange', 'reopenChange',
   'assessChangeRisk', 'recordChangeDefect', 'confirmChangePipeline', 'getEffectiveChangePipeline',
   'moveArchitectureElement',
@@ -168,7 +168,7 @@ if (!fs.existsSync(README)) {
 
     const content = fs.readFileSync(skillFile, 'utf8');
     // Look for defprod.json key references in backticks
-    const keyRefs = content.match(/`(?:products\[\]\.)?(frontendApp|backendApp|e2eDir|compileCheck|name)`/g) || [];
+    const keyRefs = content.match(/`(?:products\[\]\.)?(frontendApp|backendApp|e2eDir|compileCheck|reviewQueuePath|name)`/g) || [];
     const keys = [...new Set(keyRefs.map(k => k.replace(/`/g, '').replace('products[].', '')))];
 
     for (const key of keys) {

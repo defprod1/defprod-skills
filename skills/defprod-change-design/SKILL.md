@@ -40,7 +40,7 @@ and record it on the change record.
 ## Change context (stamping preamble)
 
 Resolve the current change context, in precedence order:
-1. `.defprod/change` in the worktree root — JSON `{ productId, changeId, changeKey, productSlug, multiProduct }`.
+1. `.defprod/change` in the worktree root — JSON `{ productId, changeId, changeKey, productSlug, multiProduct }`, plus `unattended: true` when the run has nobody in the session.
 2. A branch named `chg/<slug>/CHG-NN-*` (or legacy `chg/CHG-NN-*`) → resolve via `getChange { productId, key }`.
 3. A `Change: <product-slug>/CHG-NN` trailer on the HEAD commit → resolve the slug
    to a product, then `getChange { productId, key }` (tolerate a legacy bare
@@ -84,6 +84,40 @@ mode given, default to **interactive**.
 - **interactive** — design *with* the human: choose a discussion depth (Workflow
   step 2 below), and **always present the agreed design for explicit approval
   before `finishChangeStage`**.
+
+### Blocked in an unattended run
+
+The orchestrator passes **`unattended`** alongside the mode when there is nobody
+in the session (it is also recorded as `"unattended": true` in the
+`.defprod/change` pin). It means no question can be asked and no failure will be
+noticed by a person watching.
+
+**Autonomous does not mean press on.** Where this stage meets something it must
+not settle alone, or cannot get past:
+
+- more than one reasonable approach with materially different consequences, and
+  nothing in the repo's prior art, rules or architecture that picks between them;
+- a decision that is the business's to make rather than the codebase's.
+
+…do not guess, and do not finish the stage. Instead:
+
+1. **`cancelChangeStage { changeId, stage: 'design' }`** — the stage was
+   started and is being abandoned, so record that rather than leaving it open
+   forever or stamping a finish over work that stopped.
+2. **Raise a review item** per the *Blocked mid-stage* contract in
+   `defprod-change/SKILL.md`: a `REV####` markdown file in the repo's review
+   queue, `context: <product-slug>/CHG-NN`, and a `## Context` block a cold reader
+   can act on — what you were doing, what you tried and ruled out, the exact
+   command or assertion output, and the specific question or task a person must
+   settle. **Fill in `origin` too** — the tracker ref the change came from, blank
+   only for ad-hoc work. A claiming run greps that field to avoid re-claiming a
+   ticket whose question is still open, so an item that omits it lets the same
+   blocker be ground through again on the next run.
+3. **Return `blocked`** to the orchestrator, naming the item. It parks the change.
+
+Silence is the failure this replaces. A stage that presses on past a judgement
+call produces work nobody asked for; one that fails without a record produces
+nothing at all — and unattended, nobody sees either until much later.
 
 ## Workflow
 

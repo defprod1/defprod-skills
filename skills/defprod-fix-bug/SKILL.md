@@ -31,7 +31,9 @@ Invoke **`/defprod-change`** with:
   an external ticket, pass its ref/URL so the tracker adapter can fetch it.
 - **any driver-override args** the user supplied (e.g. `--auto`, `--auto-all`,
   `<stage>=<driver>`) — forward them verbatim; `/defprod-change` interprets them
-  (see its *Driver overrides* section).
+  (see its *Driver overrides* section). `--unattended` forwards verbatim too,
+  though it is a run mode rather than an override — do not drop it for not being
+  on that list.
 
 The orchestrator will create (or resume) the change record and walk the
 pipeline. For bugs, the **define stage** is reproduce-and-trace: it finds the

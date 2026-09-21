@@ -32,7 +32,9 @@ Invoke **`/defprod-change`** with:
   fetch it; otherwise it proceeds as ad-hoc internal work.
 - **any driver-override args** the user supplied (e.g. `--auto`, `--auto-all`,
   `<stage>=<driver>`) — forward them verbatim; `/defprod-change` interprets them
-  (see its *Driver overrides* section).
+  (see its *Driver overrides* section). `--unattended` forwards verbatim too,
+  though it is a run mode rather than an override — do not drop it for not being
+  on that list.
 
 The orchestrator will create (or resume) the change record and walk the
 pipeline: define (user story alignment) → code → test → review → land, with

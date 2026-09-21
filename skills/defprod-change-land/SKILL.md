@@ -6,6 +6,7 @@ allowed-tools:
   - Glob
   - Grep
   - Bash
+  - Write
   - AskUserQuestion
   - mcp__defprod__getChange
   - mcp__defprod__getUserStory
@@ -39,7 +40,7 @@ trailer that CI/CD hooks use to stamp the remaining pipeline stages.
 ## Change context (stamping preamble)
 
 Resolve the current change context, in precedence order:
-1. `.defprod/change` in the worktree root — JSON `{ productId, changeId, changeKey, productSlug, multiProduct }`.
+1. `.defprod/change` in the worktree root — JSON `{ productId, changeId, changeKey, productSlug, multiProduct }`, plus `unattended: true` when the run has nobody in the session.
 2. A branch named `chg/<slug>/CHG-NN-*` (or legacy `chg/CHG-NN-*`) → resolve via `getChange { productId, key }`.
 3. A `Change: <product-slug>/CHG-NN` trailer on the HEAD commit → resolve the
    slug to a product, then `getChange { productId, key }`. Tolerate a legacy
@@ -94,6 +95,31 @@ mode given, default to **interactive**.
 - **interactive** — keep the human in the loop: ask when the landing flow is
   ambiguous, and present before finishing.
 
+**Unattended, landing needs the repository's permission on top of the driver.**
+`--unattended` parks before `merge`/`push` unless `Repo.allowUnattendedLand` is
+set, so the orchestrator dispatches you there only when it re-read that field and
+found it set — and when it does, it says so, passing `allowUnattendedLand=true`
+with the mode. An `agent` driver is consent from the *pipeline*; this is a
+separate consent from the *repository*.
+
+Treat it as a floor you enforce too. Invoked with `unattended` and **no** such
+statement — a standalone invocation, or an orchestrator too old to pass it — you
+have no way to check it yourself (`getRepo` is not in your tool list) and an
+unstated permission is not one. So:
+
+1. **Commit** the work to the change branch, per step 1 below — do not merge, do
+   not push, do not open a PR.
+2. **`cancelChangeStage`** the landing stage you started. Committing is not
+   landing, so leaving `merge` or `push` open would record a stage still underway
+   that nothing will ever finish.
+3. **Raise a review item and return `blocked`**, exactly as for any other
+   blocker below — `kind: action`, because landing this change by hand (or
+   granting the repository the permission) is a task only a person can do.
+   Nothing is *undecided* here, which makes it tempting to skip the record; skip
+   it and an unattended run ends having committed work that nobody is told
+   about, which is the silence the whole contract exists to prevent. `blocked`
+   always carries an item.
+
 **Merge/push consent follows the driver** (D14/D26). A stage's `driver` *is* the
 durable consent signal: an `agent`-driven merge/push (→ **autonomous**) is
 standing consent — merge/push **without prompting**. A `human`-driven merge/push
@@ -101,6 +127,42 @@ standing consent — merge/push **without prompting**. A `human`-driven merge/pu
 or push. Re-asking on an `agent` stage contradicts the config; honour it. Only
 when run with **no driver context** (standalone, consent genuinely unknown) do
 you default to committing and stopping.
+
+### Blocked in an unattended run
+
+The orchestrator passes **`unattended`** alongside the mode when there is nobody
+in the session (it is also recorded as `"unattended": true` in the
+`.defprod/change` pin). It means no question can be asked and no failure will be
+noticed by a person watching.
+
+**Autonomous does not mean press on.** Where this stage meets something it must
+not settle alone, or cannot get past:
+
+- integrating the trunk needs a non-trivial conflict resolution, where picking a
+  side is a decision about behaviour rather than a mechanical merge;
+- a commit hook, gate or protected-branch rule refuses, and clearing it means
+  changing something outside this change.
+
+…do not guess, and do not finish the stage. Instead:
+
+1. **`cancelChangeStage { changeId, stage: '<the stage you started>' }`** —
+   this skill drives `merge` and `push`, so cancel whichever one you had
+   underway. The stage was started and is being abandoned, so record that rather
+   than leaving it open forever or stamping a finish over work that stopped.
+2. **Raise a review item** per the *Blocked mid-stage* contract in
+   `defprod-change/SKILL.md`: a `REV####` markdown file in the repo's review
+   queue, `context: <product-slug>/CHG-NN`, and a `## Context` block a cold reader
+   can act on — what you were doing, what you tried and ruled out, the exact
+   command or assertion output, and the specific question or task a person must
+   settle. **Fill in `origin` too** — the tracker ref the change came from, blank
+   only for ad-hoc work. A claiming run greps that field to avoid re-claiming a
+   ticket whose question is still open, so an item that omits it lets the same
+   blocker be ground through again on the next run.
+3. **Return `blocked`** to the orchestrator, naming the item. It parks the change.
+
+Silence is the failure this replaces. A stage that presses on past a judgement
+call produces work nobody asked for; one that fails without a record produces
+nothing at all — and unattended, nobody sees either until much later.
 
 ## Workflow
 

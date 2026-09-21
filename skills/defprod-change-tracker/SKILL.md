@@ -1,6 +1,6 @@
 ---
 name: defprod-change-tracker
-description: USER-OWNED adapter — how this team's external tracker (JIRA, Notion, Linear, a docs repo, …) is read and written by the change workflow. Fill in the three operations below for your tracker; /defprod-change invokes this skill for ticket fetch, promotion link write-back, and terminal close write-back.
+description: USER-OWNED adapter — how this team's external tracker (JIRA, Notion, Linear, a docs repo, …) is read and written by the change workflow. Fill in the four operations below for your tracker; /defprod-change invokes this skill for ticket fetch, promotion link write-back, terminal close write-back, and — for an unattended run — listing the tickets it may claim.
 allowed-tools:
   - Read
   - Glob
@@ -17,15 +17,18 @@ allowed-tools:
 # Change Tracker Adapter (fill me in)
 
 `/defprod-change` is tracker-agnostic. This skill is the seam: it defines the
-**three operations** the change workflow needs from your tracker, and **you
+**four operations** the change workflow needs from your tracker, and **you
 edit this file** to say how each is done for your team. The worked examples
 below cover common setups — replace the "Your tracker" sections with real
 instructions and delete the examples you don't use.
 
+Only the fourth, `listClaimable`, is optional: it is what an unattended run uses
+to find work, and a team that never runs one can leave it unfilled.
+
 > **This file is user-owned.** The skills installer never overwrites a
 > locally-modified copy of this skill on update.
 
-## The three operations
+## The four operations
 
 > **Change-key form.** The `changeKey` passed into `link`/`close` arrives
 > already rendered correctly for this repo — qualified `<product-slug>/CHG-NN`
@@ -67,7 +70,45 @@ promotion attempt is caught at fetch time.
 When the change ships or is cancelled, write the outcome back (e.g. a comment
 "Shipped as `<changeKey>`" or a status flip).
 
+Only `ship` and cancellation are outcomes. A change that **parked** for a person
+is still active and still promoted — `/defprod-change` does not call `close` for
+it, and neither should you.
+
 **Your tracker:** _describe how to close out the ticket here._
+
+### 4. `listClaimable()` — candidate work for an unattended run (optional)
+
+Used only by `/defprod-change --unattended`, which runs with nobody in the
+session and therefore has to be *told* what it may pick up. Return the open,
+actionable tickets that are not already promoted, each with:
+
+- **`ref`** — the ticket's own identifier, as `fetch` would take it;
+- **`title`** — one line, enough for a human reading the run's report;
+- **`ownership`** — exactly one of `agent`, `unowned`, or `person` (see below);
+- **`alreadyPromoted`** — the same already-promoted signal `fetch` reports.
+
+Return them in whatever order your team considers most important first; the
+runner takes the first eligible one.
+
+**Report ownership; do not decide eligibility.** The split is deliberate, and it
+is the whole reason this operation lives here rather than in the orchestrator:
+
+- **What counts as *unowned* is your tracker's convention**, which only this file
+  knows — `owner: unassigned` in a markdown intent repo, an empty assignee in
+  Jira or Linear, a blank person property in Notion. Say which, below.
+- **Whether unowned work may be claimed is the repository's decision**, made once
+  in DefProd via `Repo.claimUnownedWork` and read live by the orchestrator. It is
+  off unless set, so a tracker full of unassigned tickets grants nothing by
+  itself.
+
+So classify honestly and let the policy do its job. `agent` means the ticket
+carries an owner and that owner **is** the agent identity the run authenticates
+as — a one-word edit a person made deliberately, which is what makes it consent.
+Never report `agent` or `unowned` for a ticket assigned to a person because the
+work *looks* like agent work; that is a claim the person never made.
+
+**Your tracker:** _describe how to list claimable tickets, and say exactly what
+"unowned" looks like here — or delete this section if you never run unattended._
 
 ---
 
@@ -83,6 +124,10 @@ frontmatter including `status:` and `link:` fields.
   Already-promoted check: frontmatter `link:` is non-empty.
 - **link**: set frontmatter `link: <changeKey>` and `status: promoted`; commit.
 - **close**: set `status: done` (or `dropped`), append an outcome line; commit.
+- **listClaimable**: `grep` the files with `status: open` and an empty `link:`.
+  Ownership comes from the `owner:` line — the agent's own identity → `agent`,
+  the literal `unassigned` (or a missing/empty value) → `unowned`, anything else
+  → `person`.
 
 ### Example B — JIRA via an MCP connector
 
@@ -95,6 +140,9 @@ Assumes a JIRA/Atlassian MCP server is connected.
   field / label if your project has one).
 - **close**: add a comment `Shipped as <changeKey>` / `Cancelled (<changeKey>)`; or
   transition the issue per your team's workflow.
+- **listClaimable**: search the project's ready-for-development status with no
+  DefProd label. **Unowned = no assignee.** Assignee equal to the agent's own
+  account → `agent`; any other assignee → `person`.
 
 ### Example C — Notion via an MCP connector
 
@@ -102,6 +150,8 @@ Assumes a JIRA/Atlassian MCP server is connected.
   page content. Already-promoted check: a `DefProd change` property.
 - **link**: set the `DefProd change` property to `<changeKey>`.
 - **close**: set the page status property and append an outcome block.
+- **listClaimable**: query the database for the ready status with an empty
+  `DefProd change` property. **Unowned = an empty `Owner` person property.**
 
 ---
 
@@ -113,3 +163,8 @@ Assumes a JIRA/Atlassian MCP server is connected.
   servers, CLIs) already configured in the environment.
 - DefProd is the source of truth between `link` and `close` — do not add
   per-stage status mirroring here.
+- **`listClaimable` reports ownership, never eligibility.** What "unowned" means
+  is this file's to define; whether unowned work may be claimed is
+  `Repo.claimUnownedWork`, read live by the orchestrator and off unless set.
+  Widening the definition of "unowned" here to get more work picked up bypasses a
+  decision the repository made deliberately.

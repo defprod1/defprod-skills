@@ -196,6 +196,7 @@ Each entry in `products` maps to a DefProd product. Skills match by `name` again
 | Key | Type | Purpose |
 |-----|------|---------|
 | `skillsDir` | `string` | Directory where skills are installed (default: `.claude/skills`). The `--skills-dir` CLI flag takes precedence over this. |
+| `reviewQueuePath` | `string` | Directory holding the repo's `REV####` review items — the questions an unattended `/defprod-change` run raises when it cannot proceed alone (default: `docs/reviews`). |
 | `products` | `array` | List of product configurations |
 | `products[].name` | `string` | Product name — must match the DefProd product name |
 | `products[].frontendApp` | `string` | Path to the frontend app |

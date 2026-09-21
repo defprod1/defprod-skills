@@ -11,6 +11,8 @@ allowed-tools:
   - AskUserQuestion
   - mcp__defprod__listProducts
   - mcp__defprod__getProduct
+  - mcp__defprod__getRepo
+  - mcp__defprod__listTeamChanges
   - mcp__defprod__getEffectiveChangePipeline
   - mcp__defprod__assessChangeRisk
   - mcp__defprod__recordChangeDefect
@@ -64,7 +66,9 @@ product's pipeline config says it should.
   the orchestrator translates the driver into an execution **mode** it passes to
   the skill: `agent` → `autonomous` (run to completion, no questions),
   `human` → `interactive` (clarify as needed, and **never finish the stage
-  without explicit human approval**). `cicd` hands the stage to CI/CD.
+  without explicit human approval**). `cicd` hands the stage to CI/CD. Under
+  `--unattended` a `human` stage is not dispatched at all — there is nobody to
+  approve it, so the run parks there (see *Unattended runs*).
 - **Risk assessment** — a scored severity / occurrence / detection vector with
   per-axis evidence, recorded on the change by `assessChangeRisk` (Step 5). The
   **agent scores; the server resolves**: the *risk category* (`low` | `medium` |
@@ -131,6 +135,290 @@ The same overrides flow through the `/defprod-implement-feature` and
 `/defprod-fix-bug` shims. Invocation args, when present, **replace** any overlay
 persisted from an earlier run; absent args, the persisted overlay stands.
 
+**`--unattended` is not one of these.** It is a *run mode*, it sets no overlay,
+and it refuses to be combined with one — see *Unattended runs* below.
+
+## Unattended runs (`--unattended`)
+
+A run with **nobody in the session**. It claims eligible work from your tracker,
+drives it, and stops where your pipeline says a person is needed — leaving the
+change **parked** for someone to pick up, or a **review item** where it could not
+proceed at all.
+
+```
+/defprod-change --unattended             # claim eligible work and drive it
+/defprod-change PROJ-123 --unattended    # drive one named ticket with nobody watching
+```
+
+### It is not a driver override — and must not be combined with one
+
+**`--unattended` sets no overlay at all.** It is documented next to the overrides
+because callers reach for them together, and that is exactly the mistake:
+`--auto` / `--auto-all` **override the risk-selected pipeline** — *"a `--auto` run
+is autonomous whatever the risk category selected"* — so an unattended run wearing
+that overlay drives a `high`-risk change straight past every human stage it has.
+That is the inverse of what this mode is for: here the category is precisely what
+decides how far the run gets.
+
+- **Refuse to combine.** `--unattended` together with `--auto`, `--auto-all`,
+  `--interactive` or any `<stage>=<driver>` pair is a contradiction, not a
+  preference. Stop and report it; never silently drop one of the two.
+- **Ignore any persisted overlay.** A `driverOverrides` object left in
+  `.defprod/change` by an earlier interactive run is **cleared**, not honoured —
+  otherwise resuming a change unattended smuggles yesterday's `--auto` into a
+  session with nobody in it.
+
+What `--unattended` *does* take is the other half of `--auto-all`: **intake
+consent**. The distilled intent is accepted as-is, the `accept` gate is not
+prompted, and Step 5's pipeline confirmation is made without asking. That is not a
+hole in the stop rule below — `accept` is `human` in every stock preset, so a rule
+that stopped at the first `human` stage would halt every change before it began.
+Intake consent is the orchestrator's; it was never a stage driver.
+
+### Repository policy — three fields, read live
+
+Take `repoId` from `.defprod/defprod.json` and call `getRepo`. Three nullish
+fields govern this mode, and **each is conservative when unset**:
+
+| Field | Unset | What it permits |
+|---|---|---|
+| `allowUnattendedLand` | **false** | Whether an unattended run may run the landing stages at all. |
+| `claimUnownedWork` | **false** | Whether a ticket carrying no owner may be claimed. |
+| `maxParkedUnattendedChanges` | **3** | How many of this runner's changes may sit parked before it claims no more. |
+
+**Read them at the moment each decision is made, not once at run start.**
+Withdrawal is an emergency brake and must bite work already in flight, exactly as
+the withdrawal of `applyConfirmedPipeline` does.
+
+**The direction is fixed and is not itself configurable.** This skill's own
+default is to park; a repository field can only ever **loosen** from that. A host
+that has not opted in is never moved — the only safe default for a skill that
+installs everywhere, because an absent field means *nobody said*, not *it's fine*.
+
+`maxParkedUnattendedChanges` is nullish and **`0` is a value**. Resolve it as
+*unset → 3, otherwise as written*. `0` is the field's pause switch, and a `?? 3`
+that swallowed it would make the one setting that stops the runner impossible to
+express.
+
+**An unreadable policy is never a permissive one.** Where the config carries no
+`repoId`, where `getRepo` is refused, or where the server is too old to carry
+these fields, take the two **permissions** as unset: park before landing, claim
+nothing unowned. Failing open here would let a repository be moved by an agent
+purely because a lookup failed.
+
+The **cap is not a permission and does not default the same way.** Defaulting it
+to 3 is meaningless when the same failure took away the `repoId` and `teamId` the
+count is made with — a bound you cannot measure against is not a bound. That case
+stops the run outright, at step 2 of *Claiming work* below.
+
+### Claiming work
+
+**This runs before Workflow Step 1, not inside it.** Claiming needs only the
+repository — `repoId` straight from `.defprod/defprod.json`, and `teamId` from
+the `getRepo` call above — so it does not wait on product resolution. It is the
+claimed ticket that then feeds Step 1's ladder, exactly as a ticket named on the
+command line would.
+
+Skip the section entirely when the invocation named a ticket: a person choosing
+the work **is** the claim.
+
+1. **Count what is already parked.**
+   `listTeamChanges { teamId, repoId, isCancelled: false }` — the cap is a
+   *repository* field, so it spans every product in the repository, not any one
+   of them. Keep the rows still active (not shipped, not cancelled) that **this
+   runner created**: no field marks a change unattended, so *its* changes are the
+   ones whose `createdBy` is the identity this run authenticates as. `getChange`
+   each one, resolve its next enabled stage exactly as the loop does, and count it
+   **parked** when that stage's driver is `human`. A change a person has since
+   carried past its human stage is no longer waiting on anyone here.
+
+   Where the run genuinely cannot tell its own changes apart, count **every**
+   parked active change in the repository instead. Over-counting only ever claims
+   less, which is the safe direction; under-counting is how the cap is exceeded.
+
+2. **If `parked >= maxParkedUnattendedChanges`, claim nothing and exit cleanly.**
+   A full stop, not an error. With a cap of `0` the comparison holds from the
+   start and nothing is ever claimed — that is the field doing its job, which is
+   why `0` must never be read as unset.
+
+   **If the count cannot be taken at all, claim nothing either** — a config with
+   no `repoId`, a refused `getRepo`, no `teamId` to list by. The unreadable-policy
+   rule above makes the *permissions* default to off; this is its counterpart for
+   the *bound*, and it has to be stated separately because an uncountable cap is
+   not a generous one. Exit `aborted`, naming the missing piece. Claiming on the
+   strength of a bound you could not read is the one fail-open this mode cannot
+   afford: nothing downstream would stop it.
+
+3. **Ask the adapter for candidates** — `/defprod-change-tracker`, the
+   `listClaimable` operation.
+
+   **If the adapter has no `listClaimable` section, stop with `claimed-none`.**
+   That skill is user-owned and is never overwritten once a team has edited it,
+   so an older installation simply will not have the operation. Do **not**
+   improvise a notion of "claimable" or "unowned" from the tracker directly:
+   those are precisely the tracker-specific judgements the seam exists to hold,
+   and guessing them is how an unattended run picks up somebody's work. Report
+   that the adapter needs its fourth operation filled in.
+
+   It reports each candidate's **ownership**; it does not decide eligibility.
+   You do:
+   - owned by the agent → claimable;
+   - **unowned** → claimable **only if** `claimUnownedWork` is set;
+   - owned by a person → never claimable.
+
+   What counts as *unowned* is the tracker's own convention and therefore the
+   adapter's business. Whether unowned counts is the repository's, and therefore
+   yours.
+
+4. **Drop candidates already spoken for**: a ticket the adapter reports as
+   already promoted, and one whose `ref` appears in the `origin` field of an
+   **open review item** in the queue below — which is why that template carries
+   the ticket ref, so this check is a grep rather than a crawl through every
+   change record. An open item is a question sitting in a person's court, and
+   re-claiming its ticket re-grinds the work that raised it. (Step 3's
+   `listChanges` dedupe still runs afterwards, on the one candidate taken, once
+   Step 1 has resolved its product.)
+
+5. **Take exactly one candidate**, the first eligible one in the order the
+   adapter returned them, and hand it to Workflow Step 1 as the run's ticket.
+
+   **One claim per invocation.** The skill does not loop over changes: it claims
+   one, drives it, and exits with the outcome below. Claiming the next is the
+   caller's job — it re-invokes, and the cap it re-counts at step 1 is what
+   eventually makes that invocation a `claimed-none`. Keeping the loop outside
+   means a run that wedges costs one change, not the whole queue, and it is why
+   releasing the pin matters even though this skill never claims twice.
+
+### The stop rule
+
+Inside Step 6's loop, **before dispatching any stage**:
+
+- **The next enabled stage's resolved driver is `human`** → **park**. Do not
+  dispatch it, in any mode. The run exits cleanly, leaving the change active at
+  that position.
+- **The next enabled stage is `merge` or `push`** → park **unless**
+  `allowUnattendedLand` is set on the repo, re-read at that moment. This holds
+  whatever the band said: an all-`agent` band still parks before landing until a
+  repository opts in.
+- **The next enabled stage's driver is `cicd`** → hand off exactly as an
+  interactive run does; where the pipeline has landing stages, they already went
+  through the permission above. If the pipeline enables none and the run arrives
+  here having pushed nothing, say so plainly rather than reporting a hand-off:
+  there is nothing for CI to pick up.
+
+**Parking needs no new state.** An active change whose next stage carries `human`
+oversight **is** the parked state, and `/defprod-change` resumes from a change's
+recorded position. There is nothing to invent, and nothing to patch.
+
+A risk **rise** mid-run is this rule working, not fighting it: where the repo
+grants the confirmed pipeline authority, a re-score into a stricter band can turn a
+later stage `human`, and the run then parks there instead of driving on.
+
+### Parking — and releasing the pin
+
+Parking is three things, in order:
+
+1. **Commit the outstanding work to the change's branch**, following the repo's
+   commit conventions and the trailer rules in `/defprod-change-land` — except
+   that this is an **interim** commit, so the trailer carries a stage ceiling,
+   `Change: <product-slug>/CHG-NN:<last-finished-stage>` (probe for suffix support
+   first, exactly as `defprod-change-design` documents). An unsuffixed trailer
+   here would let a commit that delivered half a change walk it to `ship` forever.
+
+   **Do not merge, do not push, do not open a pull request.** Those are the
+   landing stages, and parking is what happens because they were not permitted.
+   The branch therefore stays on the machine that made it; publishing it so a
+   reviewer elsewhere can see it is that host's arrangement, not a permission this
+   skill has.
+
+2. **Release the pin.** The pin holds *pin present ⇔ a change is hands-on in
+   this worktree*, and a parked change is hands-on for a **person, elsewhere** —
+   so the invariant says release it. This is not bookkeeping: hold the pin and
+   Step 4 refuses the next claim, and the runner deadlocks after exactly one
+   change. **The pin is a lock; the bound on work-in-progress is
+   `maxParkedUnattendedChanges`.** Conflating them makes the bound an accident of
+   locking rather than a decision.
+
+   **Release it the way the installation releases it**, per the same rule
+   `/defprod-change-land` applies at the land hand-off: deleting
+   `.defprod/change` is right only when the pin was written by hand. Where the
+   installation's own tooling wrote it, call *that* tooling's release step, so
+   everything else bound to the change — the worktree or environment, an isolated
+   database, a running session — goes with it. Deleting the file directly there
+   half-releases, and an unattended runner that half-releases leaks the binding on
+   every park with nobody watching. `defprod-change/SKILL.local.md` is where an
+   installation records that it owns the pin's lifecycle.
+
+3. **Report the park**: the change key, the stage it is parked at, why (`human`
+   oversight, or landing not permitted), and the branch carrying the work.
+
+### Blocked mid-stage — raise a review item
+
+Where a run cannot proceed *within* a stage — a judgement call it must not make
+alone, or an obstacle it cannot clear — the stage raises a **review item** and the
+change parks. Review items are this mode's **output**, never its input: a ticket
+is a unit of work to consider, while a review item is one fork an agent is blocked
+on, and implementing one unattended would bypass the very decision the record
+exists to request.
+
+A review item is a markdown file in the repository's review queue —
+`reviewQueuePath` from `.defprod/defprod.json`, default `docs/reviews/` (create
+the directory if it is absent):
+
+```
+---
+id: REV####                 # next above the high-water mark of existing files
+title: <one line, written for someone who was not here>
+created: YYYY-MM-DD
+kind: decision | action     # a question for a person, or a task only a person can do
+raised_by: defprod-change/<stage>
+context: <product-slug>/CHG-NN
+origin: <tracker ref the change came from, or blank for ad-hoc work>
+status: open
+resolution:
+---
+
+## What's needed
+<the question or the task, stated so a cold reader knows exactly what to settle>
+
+## Context
+<everything a fresh session needs: files, commands run, exact output, what was
+already tried and ruled out, and why this was not decided here>
+```
+
+Name it `REV####-<short-slug>.md` and commit it with the parked work — it travels
+with the branch the question is about.
+
+**Then put the item's whole body in the exit report, not just its path.** A
+parked branch is not pushed (landing was not permitted, which is why the run
+parked), so on a host with nobody on it the file reaches no one: the report is
+the only thing that leaves. A path alone hands the reader a location they may
+not be able to open. Reproduce `## What's needed` and `## Context` verbatim, then
+name the id and path so the two can be reconciled once the branch is picked up.
+
+**The stage that raised it calls `cancelChangeStage`, never `finishChangeStage`.**
+A stage abandoned mid-flight is not a completed one, and a finish stamp on work
+that stopped is the worst of the three records available.
+
+### Exit report
+
+Every unattended run ends by naming one outcome, then the detail behind it:
+
+| Outcome | Means |
+|---|---|
+| `claimed-none` | Nothing eligible, or the parked cap is reached. Not an error. |
+| `parked` | The change is active at a stage a person must take. Name change, stage, reason, branch. |
+| `blocked` | A review item was raised. Name the change, and reproduce the item's body as above — its id and path alone are not the report. |
+| `handed-to-cicd` | The pipeline reached its CI/CD boundary. |
+| `shipped` | The pipeline ran to completion. |
+| `aborted` | A precondition failed. Name what a person must do. |
+
+**An unattended run never asks a question and never forces a lock.** Where Step
+1's resolution ladder ends at *ask the user*, and where Step 4 finds the worktree
+pinned to a **different active change**, the run **aborts** — it does not guess a
+product and it does not `--force`. A contradictory invocation (above) aborts the
+same way.
+
 ## Workflow
 
 ### Step 1 — Resolve the product
@@ -162,6 +450,16 @@ overrides*). Apply it on top of the pipeline config and **echo the effective
 driver map**, marking overridden stages (e.g. `review: agent * ← was human`),
 then proceed — no confirmation prompt. Ignore (and note) any override targeting
 a skill-less cicd stage.
+
+Under **`--unattended`** there is no overlay to resolve: echo the pipeline as the
+server resolved it, clear any `driverOverrides` persisted in the pin, and — where
+this ladder reached rung 5 — **abort** rather than ask, because nobody is there
+to answer. The ticket in hand is the ladder's input at rungs 3–4: take the
+package or area it names, and abort only if it genuinely leaves the product
+ambiguous. The repository's unattended policy has already been read by then
+(*Unattended runs* runs before this step on a claiming run, and a named-ticket
+run reads it here) — and it is re-read at each decision it governs, never cached
+for the run.
 
 ### Change-key qualification (single- vs multi-product repos)
 
@@ -204,17 +502,24 @@ here, not N.
 - **With a ticket ref/URL**: fetch it via the **`/defprod-change-tracker`**
   adapter skill (the user-owned skill that knows how to talk to your tracker).
   If the adapter is unfilled or absent, fall back to asking the user to paste
-  the ticket content or describe the work.
+  the ticket content or describe the work — except under **`--unattended`**,
+  where there is no one to ask: exit `aborted`, naming the ticket the adapter
+  could not fetch. Note this is `aborted`, not the `claimed-none` an absent
+  `listClaimable` produces: there being no work to claim is a normal, quiet
+  outcome, while a ticket that exists and cannot be read is something broken.
 - **Bare invocation**: this is ad-hoc internal work — compose the intent
   interactively with the user.
 
 Classify the **type** (`feature` | `enhancement` | `bug`) from the ticket or
 ask. Distill the **intent** (markdown: what we are changing and why — the
 accepted decision, not a paste of the ticket) and **confirm it with the user
-before creating anything**. Under **`--auto-all`**, skip this confirmation and
-the `accept` gate — the distilled intent is accepted as-is and recorded as the
-change's intent. `--auto` does **not** skip it: you still confirm *what* is
-being built. If the intent text mentions another change (a duplicate, a
+before creating anything**. Under **`--auto-all`** or **`--unattended`**, skip
+this confirmation and the `accept` gate — the distilled intent is accepted as-is
+and recorded as the change's intent. `--auto` does **not** skip it: you still
+confirm *what* is being built. An `--unattended` run never reaches the ad-hoc path:
+it always arrives holding a ticket ref — the one it was invoked with, or the one
+*Claiming work* already selected before Step 1 — because there is no one to
+compose an intent with. If the intent text mentions another change (a duplicate, a
 superseded predecessor, a related sibling), render that mention per
 *Change-key qualification* above.
 
@@ -267,14 +572,18 @@ Make the change discoverable by stage skills and CI hooks:
    it — if that change is still **active** (not shipped/cancelled), this worktree
    is already hands-on for another change. **Refuse** to overwrite the pin and
    stop with a clear message (the other change's key + its branch), unless the
-   operator explicitly forces it (`--force`). A leftover pin from a
+   operator explicitly forces it (`--force`) — **an unattended run never forces
+   it**, it aborts, because there is no operator there to own the collision. A leftover pin from a
    **shipped/cancelled** change is stale — replace it freely. This makes two
    sessions unable to silently share one tree: the second change must be forced,
    or belongs in a separate worktree/branch. If a driver overlay was resolved in
    Step 1, persist it here too as a `driverOverrides` object (e.g.
    `"driverOverrides": { "review": "human", "code": "agent" }`) so the override
    survives a CI/CD-handoff → resume cycle. It is cleared with the pin on
-   ship/cancel.
+   ship/cancel. Under `--unattended` persist `"unattended": true` instead (that
+   mode has no overlay to persist), so a stage skill can tell that nobody is in
+   the session. It goes with the pin when the change parks — whoever resumes it
+   is, by then, in the session.
 2. In branch-based flows, create the branch **`chg/<product-slug>/CHG-NN-<short-slug>`** — the `<slug>/CHG-NN` tail matches the commit trailer (D23). (Legacy bare `chg/CHG-NN-<short-slug>` branches are still recognised by the stage skills and CI.)
 3. (Commits made later by `/defprod-change-land` carry the
    `Change: <product-slug>/CHG-NN` trailer.)
@@ -375,7 +684,8 @@ change work.
    (default, and under `--auto`, which preserves the `accept` gate), present the
    pipeline and confirm it with them before calling — this is the one moment
    the design intends a human to see the oversight level before it is recorded.
-   Under `--auto-all`, confirm without prompting.
+   Under `--auto-all` or `--unattended`, confirm without prompting — in both,
+   intake consent was already given at invocation.
 
    **If confirmation is unavailable, note it and continue**, exactly as for
    assessment: the tool is gated by the same flag and exists only on servers new
@@ -425,9 +735,17 @@ Repeat until the pipeline ends or control leaves the agent:
    `.defprod/change` as `driverOverrides`) so the override is honoured every
    iteration and survives a resume. The overlay is the caller's, so it still sits
    on top — a `--auto` run is autonomous whatever the risk category selected.
+   **Under `--unattended` there is no overlay**, by design: the whole point of
+   that mode is that the category governs, so the resolved pipeline stands as the
+   server gave it.
 2. Determine the next enabled stage after the current position.
    - No next stage → the change is shipped or at pipeline end; go to Step 7.
-3. Consult that stage's **driver** and act:
+3. **Under `--unattended`, apply the stop rule first** (see *Unattended runs*):
+   a next stage whose resolved driver is `human` **parks the change** and ends
+   the run without dispatching it, and `merge`/`push` park too unless
+   `allowUnattendedLand` is set on the repo, re-read now. Only where the stop
+   rule does not fire does the run continue into the dispatch below.
+4. Consult that stage's **driver** and act:
    - **`cicd`** → END the run. Report that the change is handed to the
      CI/CD pipeline (its hooks stamp `finishChangeStage` from here — see
      `defprod-stamp.sh` in defprod-scripts).
@@ -435,7 +753,18 @@ Repeat until the pipeline ends or control leaves the agent:
      `startChangeStage { changeId, stage, driver }` yourself, immediately before
      dispatching**, passing the overlay-resolved `driver` — then invoke the stage's
      skill, passing the change type **and the mode**: `agent` → `mode=autonomous`,
-     `human` → `mode=interactive`.
+     `human` → `mode=interactive`. Under `--unattended`, also pass `unattended`
+     alongside the mode — the resolved driver is always `agent` there (the stop
+     rule caught the rest), and the flag is what tells the stage that a blocker
+     must become a review item rather than a question or a guess.
+
+     **Dispatching `merge` or `push` unattended, say so explicitly**: pass
+     `allowUnattendedLand=true` with the mode. Reaching that dispatch at all
+     means the stop rule re-read the field and found it set, and `/defprod-change-land`
+     will not land without being told — it has no `getRepo` of its own, and an
+     unstated permission is not one. This is the clause that makes D64's *flip a
+     field* actually flip something: without it, a repository that opted in still
+     parks.
 
      **Why the orchestrator stamps the start, when the skill stamps it too.** Only
      the stage skills used to call it, so a skill that was substituted, run
@@ -452,10 +781,13 @@ Repeat until the pipeline ends or control leaves the agent:
      can report the driver correctly. In interactive mode the skill keeps the human
      in the loop and will **not** `finishChangeStage` without explicit approval,
      so a human gate is honoured *inside* the stage — not by stopping the loop
-     before it. (This replaces the earlier "human → stop the loop" rule: the
-     approval-before-finish gate is now the control point. After the stage
-     finishes, continue the loop — re-read the config and consult the next
-     stage's driver.)
+     before it. (This replaces the earlier "human → stop the loop" rule **for a
+     run with a person in it**: the approval-before-finish gate is the better
+     control point precisely because they are asked with the proposed result in
+     hand. That reasoning has no referent under `--unattended`, where the stop
+     rule in step 3 applies instead and a `human` stage is never dispatched at
+     all.) After the stage finishes, continue the loop — re-read the config and
+     consult the next stage's driver.
    - **`human`** or **`agent`** on a **skill-less** stage (`build`, `package`,
      `staging`, `ship` — CI/CD territory) → nothing for the agent to run: hand
      off as for `cicd`, or STOP and report if a human must act.
@@ -479,15 +811,19 @@ Repeat until the pipeline ends or control leaves the agent:
      stamp above covers the start, but nothing else covers the finish, so an
      override that does not stamp leaves the change parked at a stage it has
      actually completed.
-4. The stage skill stamps its own start and finish as well. The orchestrator
-   stamps only the **start**, per step 3 — it never calls `finishChangeStage` for
+5. The stage skill stamps its own start and finish as well. The orchestrator
+   stamps only the **start**, per step 4 — it never calls `finishChangeStage` for
    stage work it delegated, because only the skill knows whether the stage's
    done-condition was actually met (and, in interactive mode, whether the human
    approved it).
-5. **If the stage that just finished was `design` or `code`, re-assess the risk**
+6. **If a stage reported itself blocked** rather than finished — an unattended
+   run's stage skills raise a review item instead of guessing — do not advance
+   and do not retry. Park the change (see *Blocked mid-stage*) and end the run
+   reporting `blocked`.
+7. **If the stage that just finished was `design` or `code`, re-assess the risk**
    before continuing the loop — see *Re-assessment at the design and code
    boundaries* below.
-6. **If the stage that just finished was `code` and the change is a `bug`,
+8. **If the stage that just finished was `code` and the change is a `bug`,
    classify the defect it repaired** — see *Defect classification after `code`*
    below. Then continue at 1.
 
@@ -572,8 +908,9 @@ human was consulted about.
   applies and is **announced**, not asked about, in every driver mode.
 - **Category fell** → the pipeline **does not relax**. You may *propose*
   relaxation to a human; you may never apply it, because an agent does not reduce
-  oversight below an explicit human choice. Under `--auto` / `--auto-all` a fall
-  is **recorded and ignored** — no prompt, no relaxation. A fall is often
+  oversight below an explicit human choice. Under `--auto`, `--auto-all` or
+  `--unattended` a fall is **recorded and ignored** — no prompt, no relaxation;
+  in the last of those there is nobody to propose it to. A fall is often
   legitimate and earned — adding a test that fails on the identified failure mode
   is the cheapest way there is to lower detection — which is why falls travel the
   proposal path rather than being discarded.
@@ -620,6 +957,10 @@ On cancellation (`cancelChange`), also **delete `.defprod/change`** — a
 cancelled change is no longer hands-on in the worktree. (On `ship`, the pin was
 already cleared at the land hand-off, Step 6 / `change-land`.)
 
+**A parked change gets no close write-back.** Parking is not an outcome — the
+change is still active, and the ticket is still promoted, not done. The `close`
+operation belongs to `ship` and to cancellation alone.
+
 ## Rules
 
 - **Re-consult the driver map every iteration.** A human gate must never be
@@ -627,14 +968,35 @@ already cleared at the land hand-off, Step 6 / `change-land`.)
   the stage skill's **interactive** approval-before-finish, so "continue" means
   re-reading the next stage's driver and invoking its skill with the right
   mode — never advancing a `human`-driven stage to `finished` unprompted.
+- **`--unattended` sets no driver overlay, and never combines with one.** The
+  overlay outranks the risk-selected pipeline, so an unattended run wearing
+  `--auto` drives a `high`-risk change past every human stage it has — the exact
+  inverse of the mode's purpose. It takes intake consent only, which is the
+  orchestrator's and was never a stage driver; that is also why `accept` being
+  `human` in every preset does not halt the run on the spot.
+- **Unattended: a `human` stage parks the change; the repo's fields only ever
+  loosen.** Park before `merge`/`push` unless `allowUnattendedLand` is set, claim
+  an unowned ticket only where `claimUnownedWork` is set, and claim nothing once
+  `maxParkedUnattendedChanges` is reached — `0` is a value, not an absence. Read
+  all three **live**, so withdrawal bites work already in flight. Absence of a
+  field means *nobody said*, which is never permission.
+- **Unattended: release the pin when the change parks.** A parked change is
+  hands-on for a person elsewhere, so the worktree is free — hold the pin and the
+  runner deadlocks after exactly one change. The pin is a **lock**; the bound on
+  work-in-progress is `maxParkedUnattendedChanges`, counted from the listing.
+  They are two mechanisms, not one.
+- **Unattended: blocked means a review item, never a guess and never silence.**
+  A stage that cannot proceed alone `cancelChangeStage`s, writes a self-describing
+  `REV####` into the repo's review queue, and parks. Review items are this mode's
+  output; a run never claims one as input.
 - **Driver overrides are per-run, never config.** Resolve the overlay on top of
   the freshly-read config each iteration; never `patchProduct`. Precedence:
   explicit pair → shorthand → config → default. The overlay sets only
   `human`/`agent` on skill-backed stages — a skill-less cicd stage can't be
   overridden to agent. Echo the effective map once at run start; don't prompt.
 - **The intent field is the accepted decision** — confirmed by the user, not a
-  ticket paste. (`--auto-all` accepts the distilled intent as-is; `--auto` does
-  not.)
+  ticket paste. (`--auto-all` and `--unattended` accept the distilled intent
+  as-is; `--auto` does not.)
 - **Never write lifecycle state via patch** — position moves only through the
   stage-action tools.
 - **Risk is scored, never asserted.** Supply severity / occurrence / detection
@@ -656,8 +1018,8 @@ already cleared at the land hand-off, Step 6 / `change-land`.)
 - **Re-assess at the `design` and `code` boundaries, and ratchet one way.** A
   risen category forces the stricter pipeline and is announced; a fallen one is
   only ever *proposed* to a human, never applied, and is recorded-and-ignored
-  under `--auto` / `--auto-all`. Raising oversight is safe to automate; lowering
-  it is the thing the human was consulted about.
+  under `--auto`, `--auto-all` or `--unattended`. Raising oversight is safe to
+  automate; lowering it is the thing the human was consulted about.
 - **The server decides whether risk selects the pipeline; you read the answer.**
   Take the driver map from `getChange`'s `effectivePipeline` and report its
   `effectivePipelineSource`. Never infer authority from a repo setting, and never
@@ -666,7 +1028,9 @@ already cleared at the land hand-off, Step 6 / `change-land`.)
   refuses to claim a tree already pinned to a *different active* change (override
   only with `--force`), so parallel changes cannot silently share a tree — they
   belong in separate worktrees or branches. The pin is cleared at the land
-  hand-off and on cancel, and stage skills **self-heal** a stale pin on read
+  hand-off, on cancel, and — under `--unattended` — when the change parks, since
+  a parked change is hands-on for a person elsewhere. Stage skills **self-heal**
+  a stale pin on read
   (validate the pinned change is active; delete it if shipped/cancelled), so a
   leftover pin never traps the next change. As a backstop against a tree that
   drifts *mid-stage*, `/defprod-change-land` re-validates branch/pin consistency
