@@ -4,6 +4,21 @@ All notable changes to `@defprod/skills` are documented here. The format roughly
 
 The **source of truth for release notes is the [GitHub Releases](https://github.com/defprod1/defprod-skills/releases) page** for this repository. Each entry below mirrors a GitHub Release; click the version heading to read the full body, including any breaking-change upgrade guidance.
 
+## [1.22.0] — 2026-09-22
+
+### Added
+
+- **`/defprod-change --unattended` — a run mode for a session with nobody in it.** It claims one eligible ticket, drives it through the stages its risk band allows, and **parks** where the next stage needs a person, leaving the change active for `/defprod-change` to resume. Parking invents no state: an active change whose next stage carries `human` oversight *is* parked. Crucially it sets **no driver overlay** and refuses to combine with one — reusing `--auto` would have driven a `high`-risk change past every human stage it has, which is the inverse of the point. Three repository fields govern it, each conservative when unset and read live: `allowUnattendedLand` (unset = false, so a run parks before merging), `claimUnownedWork` (unset = false), and `maxParkedUnattendedChanges` (unset = 3, where `0` is a real value meaning claim nothing while any of mine is parked). The skill's own default is to park; a field can only ever loosen from that, so a host that never opted in is never moved. An unreadable policy is never a permissive one, and an uncountable cap stops the run rather than being treated as generous.
+- **An optional fourth tracker-adapter operation, `listClaimable()`**, reporting candidate tickets and their ownership (`agent`, `unowned`, `person`). What ownership *means* is the tracker's convention and so the adapter's business; whether unowned work counts is the repository's. Teams that never run unattended can leave it unfilled, and a run against an adapter without it stops cleanly rather than improvising a definition of "claimable".
+- **A stage-ceiling trailer on interim park commits**, so a commit that delivered half a change cannot later walk it to `ship`.
+
+### Changed
+
+- The six stage skills now state what to do when blocked with nobody to ask — raise a review item and park, rather than guessing or failing silently. Review items are this mode's output, never its input.
+- `/defprod-implement-feature` and `/defprod-fix-bug` forward `--unattended` verbatim, as they already do for the driver overrides.
+
+See [v1.22.0 release notes](https://github.com/defprod1/defprod-skills/releases/tag/v1.22.0) for the full body.
+
 ## [1.21.0] — 2026-08-24
 
 ### Changed
@@ -349,3 +364,4 @@ Initial public release.
 [1.0.0]: https://github.com/defprod1/defprod-skills/releases/tag/v1.0.0
 [1.20.1]: https://github.com/defprod1/defprod-skills/releases/tag/v1.20.1
 [1.21.0]: https://github.com/defprod1/defprod-skills/releases/tag/v1.21.0
+[1.22.0]: https://github.com/defprod1/defprod-skills/releases/tag/v1.22.0
