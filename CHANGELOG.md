@@ -4,6 +4,19 @@ All notable changes to `@defprod/skills` are documented here. The format roughly
 
 The **source of truth for release notes is the [GitHub Releases](https://github.com/defprod1/defprod-skills/releases) page** for this repository. Each entry below mirrors a GitHub Release; click the version heading to read the full body, including any breaking-change upgrade guidance.
 
+## [1.23.0] — 2026-09-24
+
+### Renamed
+
+- **The stage field `driver` is now `oversight`**, following the server rename. It names the right party: under `human` the agent still performs the stage and simply may not finish it without approval. Values are unchanged (`human` | `agent` | `cicd`). The six stage skills report `oversight` on their stamps, and `/defprod-change` reads it from each pipeline entry and stamps the start with it. "Driver overrides / overlay" become oversight overrides / overlay, and `<stage>=<driver>` becomes `<stage>=<oversight>`. The flags themselves are unchanged.
+
+### Compatibility
+
+- Against a server that predates the rename, a pipeline entry's `driver` is read when `oversight` is absent, and a stamp whose `oversight` is refused is retried as `driver`, then without the field. Neither is a stage failure.
+- The pin persists the overlay as `oversightOverrides`. A pin carrying the legacy `driverOverrides` is read as the same thing and rewritten, so a change already in flight resumes with its overlay.
+
+See [v1.23.0 release notes](https://github.com/defprod1/defprod-skills/releases/tag/v1.23.0) for the full body.
+
 ## [1.22.0] — 2026-09-22
 
 ### Added
@@ -365,3 +378,4 @@ Initial public release.
 [1.20.1]: https://github.com/defprod1/defprod-skills/releases/tag/v1.20.1
 [1.21.0]: https://github.com/defprod1/defprod-skills/releases/tag/v1.21.0
 [1.22.0]: https://github.com/defprod1/defprod-skills/releases/tag/v1.22.0
+[1.23.0]: https://github.com/defprod1/defprod-skills/releases/tag/v1.23.0
