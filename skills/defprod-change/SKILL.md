@@ -57,18 +57,26 @@ product's pipeline config says it should.
   package → staging → ship. For a change in flight, read the one it is actually
   running under from `getChange` → `effectivePipeline`; the product's standing
   configuration is `getProduct` → `changePipeline` (entries
-  `{stage, enabled, driver}`; missing entries default to enabled with default
-  drivers: accept=human; design/define/code/test/review/merge/push=agent;
+  `{stage, enabled, oversight}`; missing entries default to enabled with default
+  oversight: accept=human; design/define/code/test/review/merge/push=agent;
   build/package/staging/ship=cicd). The two differ exactly when the repository has
   given the change's confirmed pipeline authority.
-- **Driver** — who executes a stage: `human`, `agent`, or `cicd`. The driver
-  map IS the orchestration policy. For stages backed by an agent stage-skill,
-  the orchestrator translates the driver into an execution **mode** it passes to
+- **Oversight** — the level of oversight a stage runs under: `human`, `agent`,
+  or `cicd`. Under `human` the agent still performs the stage; it simply may not
+  finish it without a person's approval. The oversight map IS the orchestration
+  policy. For stages backed by an agent stage-skill, the orchestrator translates
+  the oversight into an execution **mode** it passes to
   the skill: `agent` → `autonomous` (run to completion, no questions),
   `human` → `interactive` (clarify as needed, and **never finish the stage
   without explicit human approval**). `cicd` hands the stage to CI/CD. Under
   `--unattended` a `human` stage is not dispatched at all — there is nobody to
   approve it, so the run parks there (see *Unattended runs*).
+
+  The field was called `driver` until the server renamed it. An older server
+  still reports and accepts only `driver`, so wherever this workflow reads
+  `oversight` from a pipeline entry, fall back to `driver` when `oversight` is
+  absent, and wherever it reports `oversight` on a stamp, retry with the same
+  value as `driver` if the server refuses the field.
 - **Risk assessment** — a scored severity / occurrence / detection vector with
   per-axis evidence, recorded on the change by `assessChangeRisk` (Step 5). The
   **agent scores; the server resolves**: the *risk category* (`low` | `medium` |
@@ -89,21 +97,21 @@ product's pipeline config says it should.
   call: where the repo grants it, that frozen pipeline is what drives the change,
   and a later config edit cannot reach the change in flight; where it does not,
   the confirmation changes nothing about how the change is driven.
-- **Driver overlay** — a per-run `stage → driver` map the caller supplies at
-  invocation that takes precedence over the product's `changePipeline` driver,
+- **Oversight overlay** — a per-run `stage → oversight` map the caller supplies
+  at invocation that takes precedence over the product's `changePipeline` oversight,
   **for this run only**. It is never written back to the product (no
   `patchProduct`) — it is a caller override, not a config edit. Resolution
   precedence (high → low): explicit per-stage override → shorthand → product
   config entry → built-in default. The overlay changes only the **resolved
-  driver**; the driver→mode translation above and the stage skills themselves
+  oversight**; the oversight→mode translation above and the stage skills themselves
   are unchanged. Constraints: it may set only `human`/`agent`, and only for
   skill-backed stages (design/define/code/test/review/merge/push) — it cannot
   hand a skill-less cicd stage (build/package/staging/ship) an agent to run, so
-  such an override is ignored with a note. See **Driver overrides** below.
+  such an override is ignored with a note. See **Oversight overrides** below.
 
-## Driver overrides (per-run)
+## Oversight overrides (per-run)
 
-The caller can override stage drivers for a single run without editing the
+The caller can override stage oversight for a single run without editing the
 product's pipeline config. Pass overrides as invocation args alongside the
 ticket ref (they coexist):
 
@@ -117,8 +125,8 @@ ticket ref (they coexist):
   change can go all the way through unattended.
 - **`--interactive`** (alias `review-all`) — flip every skill-backed stage to
   `human` (each keeps you in the loop and won't finish without approval).
-- **`<stage>=<driver>`** — fine-grained per-stage override, space-separated and
-  combinable with a shorthand; explicit pairs win. `<driver>` ∈ {`human`,
+- **`<stage>=<oversight>`** — fine-grained per-stage override, space-separated
+  and combinable with a shorthand; explicit pairs win. `<oversight>` ∈ {`human`,
   `agent`}. E.g. `--auto review=human` runs everything autonomously except
   review, which stays a human gate.
 
@@ -150,7 +158,7 @@ proceed at all.
 /defprod-change PROJ-123 --unattended    # drive one named ticket with nobody watching
 ```
 
-### It is not a driver override — and must not be combined with one
+### It is not an oversight override — and must not be combined with one
 
 **`--unattended` sets no overlay at all.** It is documented next to the overrides
 because callers reach for them together, and that is exactly the mistake:
@@ -161,19 +169,19 @@ That is the inverse of what this mode is for: here the category is precisely wha
 decides how far the run gets.
 
 - **Refuse to combine.** `--unattended` together with `--auto`, `--auto-all`,
-  `--interactive` or any `<stage>=<driver>` pair is a contradiction, not a
+  `--interactive` or any `<stage>=<oversight>` pair is a contradiction, not a
   preference. Stop and report it; never silently drop one of the two.
-- **Ignore any persisted overlay.** A `driverOverrides` object left in
-  `.defprod/change` by an earlier interactive run is **cleared**, not honoured —
-  otherwise resuming a change unattended smuggles yesterday's `--auto` into a
-  session with nobody in it.
+- **Ignore any persisted overlay.** An `oversightOverrides` object (or the
+  legacy `driverOverrides`) left in `.defprod/change` by an earlier interactive
+  run is **cleared**, not honoured — otherwise resuming a change unattended
+  smuggles yesterday's `--auto` into a session with nobody in it.
 
 What `--unattended` *does* take is the other half of `--auto-all`: **intake
 consent**. The distilled intent is accepted as-is, the `accept` gate is not
 prompted, and Step 5's pipeline confirmation is made without asking. That is not a
 hole in the stop rule below — `accept` is `human` in every stock preset, so a rule
 that stopped at the first `human` stage would halt every change before it began.
-Intake consent is the orchestrator's; it was never a stage driver.
+Intake consent is the orchestrator's; it was never a stage's oversight.
 
 ### Repository policy — three fields, read live
 
@@ -229,7 +237,7 @@ the work **is** the claim.
    runner created**: no field marks a change unattended, so *its* changes are the
    ones whose `createdBy` is the identity this run authenticates as. `getChange`
    each one, resolve its next enabled stage exactly as the loop does, and count it
-   **parked** when that stage's driver is `human`. A change a person has since
+   **parked** when that stage's oversight is `human`. A change a person has since
    carried past its human stage is no longer waiting on anyone here.
 
    Where the run genuinely cannot tell its own changes apart, count **every**
@@ -293,14 +301,14 @@ the work **is** the claim.
 
 Inside Step 6's loop, **before dispatching any stage**:
 
-- **The next enabled stage's resolved driver is `human`** → **park**. Do not
+- **The next enabled stage's resolved oversight is `human`** → **park**. Do not
   dispatch it, in any mode. The run exits cleanly, leaving the change active at
   that position.
 - **The next enabled stage is `merge` or `push`** → park **unless**
   `allowUnattendedLand` is set on the repo, re-read at that moment. This holds
   whatever the band said: an all-`agent` band still parks before landing until a
   repository opts in.
-- **The next enabled stage's driver is `cicd`** → hand off exactly as an
+- **The next enabled stage's oversight is `cicd`** → hand off exactly as an
   interactive run does; where the pipeline has landing stages, they already went
   through the permission above. If the pipeline enables none and the run arrives
   here having pushed nothing, say so plainly rather than reporting a hand-off:
@@ -445,15 +453,15 @@ Fetch the resolved product with `getProduct`, **note its `slug`** (carried into
 the change context in Step 4 for the land trailer), and resolve the pipeline
 config as above.
 
-Then resolve the **driver overlay** from the invocation args (see *Driver
+Then resolve the **oversight overlay** from the invocation args (see *Oversight
 overrides*). Apply it on top of the pipeline config and **echo the effective
-driver map**, marking overridden stages (e.g. `review: agent * ← was human`),
+oversight map**, marking overridden stages (e.g. `review: agent * ← was human`),
 then proceed — no confirmation prompt. Ignore (and note) any override targeting
 a skill-less cicd stage.
 
 Under **`--unattended`** there is no overlay to resolve: echo the pipeline as the
-server resolved it, clear any `driverOverrides` persisted in the pin, and — where
-this ladder reached rung 5 — **abort** rather than ask, because nobody is there
+server resolved it, clear any `oversightOverrides` (or legacy `driverOverrides`)
+persisted in the pin, and — where this ladder reached rung 5 — **abort** rather than ask, because nobody is there
 to answer. The ticket in hand is the ladder's input at rungs 3–4: take the
 package or area it names, and abort only if it genuinely leaves the product
 ambiguous. The repository's unattended policy has already been read by then
@@ -576,10 +584,12 @@ Make the change discoverable by stage skills and CI hooks:
    it**, it aborts, because there is no operator there to own the collision. A leftover pin from a
    **shipped/cancelled** change is stale — replace it freely. This makes two
    sessions unable to silently share one tree: the second change must be forced,
-   or belongs in a separate worktree/branch. If a driver overlay was resolved in
-   Step 1, persist it here too as a `driverOverrides` object (e.g.
-   `"driverOverrides": { "review": "human", "code": "agent" }`) so the override
-   survives a CI/CD-handoff → resume cycle. It is cleared with the pin on
+   or belongs in a separate worktree/branch. If an oversight overlay was resolved
+   in Step 1, persist it here too as an `oversightOverrides` object (e.g.
+   `"oversightOverrides": { "review": "human", "code": "agent" }`) so the override
+   survives a CI/CD-handoff → resume cycle. A pin written before the rename
+   carries it as `driverOverrides`: read that as the same thing, and write it
+   back under the new name. It is cleared with the pin on
    ship/cancel. Under `--unattended` persist `"unattended": true` instead (that
    mode has no overlay to persist), so a stage skill can tell that nobody is in
    the session. It goes with the pin when the change parks — whoever resumes it
@@ -680,7 +690,7 @@ change work.
    naming `allowConfirmedPipelineOverride` means the repo is in its strict
    default, not that you called it wrongly.
 
-   **Consent follows the driver, as everywhere else.** With a human in the loop
+   **Consent follows the oversight, as everywhere else.** With a human in the loop
    (default, and under `--auto`, which preserves the `accept` gate), present the
    pipeline and confirm it with them before calling — this is the one moment
    the design intends a human to see the oversight level before it is recorded.
@@ -707,7 +717,7 @@ A confirmed pipeline does **not** change this. It records *what the category
 selected*; the run still proceeds under the pipeline in force. Confirming and
 applying are separate, and only the first exists today.
 
-Assessment itself needs no gate in any driver mode — nothing is applied, so there
+Assessment itself needs no gate in any oversight mode — nothing is applied, so there
 is nothing to approve. Report and continue under `--auto`, `--auto-all` and
 `--interactive` alike. Confirmation is the exception noted above, because a human
 choosing an oversight level is the point of it.
@@ -716,7 +726,7 @@ choosing an oversight level is the point of it.
 
 Repeat until the pipeline ends or control leaves the agent:
 
-1. Fetch the change (`getChange`) and **take the driver map from its
+1. Fetch the change (`getChange`) and **take the oversight map from its
    `effectivePipeline`** — the pipeline this change is actually running under,
    already resolved by the server, with `effectivePipelineSource` naming which of
    the three it came from. Re-read it **every iteration**: never plan the run
@@ -732,7 +742,7 @@ Repeat until the pipeline ends or control leaves the agent:
    driven under a pipeline nobody selected.
 
    Then **re-apply the run overlay** (the resolved overrides, persisted in
-   `.defprod/change` as `driverOverrides`) so the override is honoured every
+   `.defprod/change` as `oversightOverrides`) so the override is honoured every
    iteration and survives a resume. The overlay is the caller's, so it still sits
    on top — a `--auto` run is autonomous whatever the risk category selected.
    **Under `--unattended` there is no overlay**, by design: the whole point of
@@ -741,20 +751,21 @@ Repeat until the pipeline ends or control leaves the agent:
 2. Determine the next enabled stage after the current position.
    - No next stage → the change is shipped or at pipeline end; go to Step 7.
 3. **Under `--unattended`, apply the stop rule first** (see *Unattended runs*):
-   a next stage whose resolved driver is `human` **parks the change** and ends
+   a next stage whose resolved oversight is `human` **parks the change** and ends
    the run without dispatching it, and `merge`/`push` park too unless
    `allowUnattendedLand` is set on the repo, re-read now. Only where the stop
    rule does not fire does the run continue into the dispatch below.
-4. Consult that stage's **driver** and act:
+4. Consult that stage's **oversight** and act:
    - **`cicd`** → END the run. Report that the change is handed to the
      CI/CD pipeline (its hooks stamp `finishChangeStage` from here — see
      `defprod-stamp.sh` in defprod-scripts).
    - **`agent`** or **`human`** on a **skill-backed** stage → **call
-     `startChangeStage { changeId, stage, driver }` yourself, immediately before
-     dispatching**, passing the overlay-resolved `driver` — then invoke the stage's
+     `startChangeStage { changeId, stage, oversight }` yourself, immediately
+     before dispatching**, passing the overlay-resolved `oversight` (retried as
+     `driver` if an older server refuses the field) — then invoke the stage's
      skill, passing the change type **and the mode**: `agent` → `mode=autonomous`,
      `human` → `mode=interactive`. Under `--unattended`, also pass `unattended`
-     alongside the mode — the resolved driver is always `agent` there (the stop
+     alongside the mode — the resolved oversight is always `agent` there (the stop
      rule caught the rest), and the flag is what tells the stage that a blocker
      must become a review item rather than a question or a guess.
 
@@ -777,8 +788,8 @@ Repeat until the pipeline ends or control leaves the agent:
      stages. This is **added, not moved**: the stage skills keep their own start
      stamp because they are documented as working standalone. Double-stamping is
      free — the tool contract is first-write-wins — and the orchestrator is also the
-     only party that knows the per-run driver overlay, so its stamp is the one that
-     can report the driver correctly. In interactive mode the skill keeps the human
+     only party that knows the per-run oversight overlay, so its stamp is the one
+     that can report the oversight correctly. In interactive mode the skill keeps the human
      in the loop and will **not** `finishChangeStage` without explicit approval,
      so a human gate is honoured *inside* the stage — not by stopping the loop
      before it. (This replaces the earlier "human → stop the loop" rule **for a
@@ -787,7 +798,7 @@ Repeat until the pipeline ends or control leaves the agent:
      hand. That reasoning has no referent under `--unattended`, where the stop
      rule in step 3 applies instead and a `human` stage is never dispatched at
      all.) After the stage finishes, continue the loop — re-read the config and
-     consult the next stage's driver.
+     consult the next stage's oversight.
    - **`human`** or **`agent`** on a **skill-less** stage (`build`, `package`,
      `staging`, `ship` — CI/CD territory) → nothing for the agent to run: hand
      off as for `cicd`, or STOP and report if a human must act.
@@ -806,7 +817,7 @@ Repeat until the pipeline ends or control leaves the agent:
      stage (e.g. a project-specific `change-test`), prefer it. An override skill
      **must stamp the stage it runs**, exactly as the standard stage skills do —
      `startChangeStage` on entry and `finishChangeStage` when the stage's
-     done-condition is met, reporting `driver`. This is an obligation on the
+     done-condition is met, reporting `oversight`. This is an obligation on the
      override, not a property you may assume of it: the orchestrator's own start
      stamp above covers the start, but nothing else covers the finish, so an
      override that does not stamp leaves the change parked at a stage it has
@@ -905,7 +916,7 @@ human was consulted about.
 
 - **Category rose** → the earlier pipeline choice was made against a risk picture
   now known to be wrong, so re-selection is **forced**: the stricter preset
-  applies and is **announced**, not asked about, in every driver mode.
+  applies and is **announced**, not asked about, in every oversight mode.
 - **Category fell** → the pipeline **does not relax**. You may *propose*
   relaxation to a human; you may never apply it, because an agent does not reduce
   oversight below an explicit human choice. Under `--auto`, `--auto-all` or
@@ -963,16 +974,16 @@ operation belongs to `ship` and to cancellation alone.
 
 ## Rules
 
-- **Re-consult the driver map every iteration.** A human gate must never be
+- **Re-consult the oversight map every iteration.** A human gate must never be
   steamrolled because an earlier plan said "continue". The gate now lives in
   the stage skill's **interactive** approval-before-finish, so "continue" means
-  re-reading the next stage's driver and invoking its skill with the right
-  mode — never advancing a `human`-driven stage to `finished` unprompted.
-- **`--unattended` sets no driver overlay, and never combines with one.** The
+  re-reading the next stage's oversight and invoking its skill with the right
+  mode — never advancing a `human`-oversight stage to `finished` unprompted.
+- **`--unattended` sets no oversight overlay, and never combines with one.** The
   overlay outranks the risk-selected pipeline, so an unattended run wearing
   `--auto` drives a `high`-risk change past every human stage it has — the exact
   inverse of the mode's purpose. It takes intake consent only, which is the
-  orchestrator's and was never a stage driver; that is also why `accept` being
+  orchestrator's and was never a stage's oversight; that is also why `accept` being
   `human` in every preset does not halt the run on the spot.
 - **Unattended: a `human` stage parks the change; the repo's fields only ever
   loosen.** Park before `merge`/`push` unless `allowUnattendedLand` is set, claim
@@ -989,7 +1000,7 @@ operation belongs to `ship` and to cancellation alone.
   A stage that cannot proceed alone `cancelChangeStage`s, writes a self-describing
   `REV####` into the repo's review queue, and parks. Review items are this mode's
   output; a run never claims one as input.
-- **Driver overrides are per-run, never config.** Resolve the overlay on top of
+- **Oversight overrides are per-run, never config.** Resolve the overlay on top of
   the freshly-read config each iteration; never `patchProduct`. Precedence:
   explicit pair → shorthand → config → default. The overlay sets only
   `human`/`agent` on skill-backed stages — a skill-less cicd stage can't be
@@ -1021,7 +1032,7 @@ operation belongs to `ship` and to cancellation alone.
   under `--auto`, `--auto-all` or `--unattended`. Raising oversight is safe to
   automate; lowering it is the thing the human was consulted about.
 - **The server decides whether risk selects the pipeline; you read the answer.**
-  Take the driver map from `getChange`'s `effectivePipeline` and report its
+  Take the oversight map from `getChange`'s `effectivePipeline` and report its
   `effectivePipelineSource`. Never infer authority from a repo setting, and never
   reshape a run around a category the server did not say was governing.
 - **One change at a time per worktree** — `.defprod/change` **locks** it: Step 4

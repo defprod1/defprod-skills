@@ -29,9 +29,9 @@ Invoke **`/defprod-change`** with:
 - **the bug description** the user gave (expected vs actual, where it occurs,
   reproduction steps if known), as the intake material. If the user referenced
   an external ticket, pass its ref/URL so the tracker adapter can fetch it.
-- **any driver-override args** the user supplied (e.g. `--auto`, `--auto-all`,
-  `<stage>=<driver>`) — forward them verbatim; `/defprod-change` interprets them
-  (see its *Driver overrides* section). `--unattended` forwards verbatim too,
+- **any oversight-override args** the user supplied (e.g. `--auto`, `--auto-all`,
+  `<stage>=<oversight>`) — forward them verbatim; `/defprod-change` interprets them
+  (see its *Oversight overrides* section). `--unattended` forwards verbatim too,
   though it is a run mode rather than an override — do not drop it for not being
   on that list.
 

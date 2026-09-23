@@ -85,7 +85,7 @@ branch, and resolved change all agree, or genuine no-context) proceeds normally.
 
 ## Execution mode (autonomous / interactive)
 
-The orchestrator passes a **mode** derived from this stage's `driver`:
+The orchestrator passes a **mode** derived from this stage's `oversight`:
 `agent` → `autonomous`, `human` → `interactive`. Invoked standalone with no
 mode given, default to **interactive**.
 
@@ -95,11 +95,11 @@ mode given, default to **interactive**.
 - **interactive** — keep the human in the loop: ask when the landing flow is
   ambiguous, and present before finishing.
 
-**Unattended, landing needs the repository's permission on top of the driver.**
+**Unattended, landing needs the repository's permission on top of the oversight.**
 `--unattended` parks before `merge`/`push` unless `Repo.allowUnattendedLand` is
 set, so the orchestrator dispatches you there only when it re-read that field and
 found it set — and when it does, it says so, passing `allowUnattendedLand=true`
-with the mode. An `agent` driver is consent from the *pipeline*; this is a
+with the mode. `agent` oversight is consent from the *pipeline*; this is a
 separate consent from the *repository*.
 
 Treat it as a floor you enforce too. Invoked with `unattended` and **no** such
@@ -120,12 +120,13 @@ unstated permission is not one. So:
    about, which is the silence the whole contract exists to prevent. `blocked`
    always carries an item.
 
-**Merge/push consent follows the driver** (D14/D26). A stage's `driver` *is* the
-durable consent signal: an `agent`-driven merge/push (→ **autonomous**) is
-standing consent — merge/push **without prompting**. A `human`-driven merge/push
-(→ **interactive**) makes the human the consent point — confirm before you merge
-or push. Re-asking on an `agent` stage contradicts the config; honour it. Only
-when run with **no driver context** (standalone, consent genuinely unknown) do
+**Merge/push consent follows the oversight** (D14/D26). A stage's `oversight`
+*is* the durable consent signal: a merge/push under `agent` oversight (→
+**autonomous**) is standing consent — merge/push **without prompting**. One under
+`human` oversight (→ **interactive**) makes the human the consent point — confirm
+before you merge or push. Re-asking on an `agent` stage contradicts the config;
+honour it. Only when run with **no oversight context** (standalone, consent
+genuinely unknown) do
 you default to committing and stopping.
 
 ### Blocked in an unattended run
@@ -207,19 +208,20 @@ nothing at all — and unattended, nobody sees either until much later.
    push **you** perform, stamp the matching stage on **both sides** of the
    operation: `startChangeStage { stage }` immediately before you begin, then
    `finishChangeStage { stage }` once it succeeds. The start stamp records that
-   the landing operation is underway (and who is driving it); the finish stamp
+   the landing operation is underway (and under what oversight); the finish stamp
    records completion. If the operation fails, leave the stage started (or
    `cancelChangeStage` if you abandon it) — never finish a stage whose operation
    did not succeed.
 
-   **Report who drove it.** Pass `driver` on the start stamp: `agent` in
-   autonomous mode, `human` in interactive mode — the inverse of the
-   driver-to-mode translation that set this stage's consent, so the stamp records
-   the oversight the merge or push *actually received*. A merge or push performed
-   by the platform or by CI is stamped by its own hook and reports its own driver;
-   never report one on its behalf. First report wins, it is never inferred from
-   configuration, and an older server that rejects the field means retry without
-   it — not a failed land.
+   **Report the oversight it received.** Pass `oversight` on the start stamp:
+   `agent` in autonomous mode, `human` in interactive mode — the inverse of the
+   oversight-to-mode translation that set this stage's consent, so the stamp
+   records the oversight the merge or push *actually received*. A merge or push
+   performed by the platform or by CI is stamped by its own hook and reports its
+   own oversight; never report one on its behalf. First report wins, and it is
+   never inferred from configuration. An older server knows the field as
+   `driver`: if the stamp is refused for naming `oversight`, retry with the same
+   value as `driver`, then without it — neither refusal is a failed land.
    - **Branch/PR flow**: push the `chg/<slug>/CHG-NN-*` branch and open/hand off the
      PR. If **you** compose the PR title/body, render any change-key mention
      per the same *Change-key qualification* rule as the commit subject/body
@@ -287,9 +289,9 @@ patch id and will **not** be flagged — a clean result means "no identical
 duplicates", not "no duplicates". And if the installation provides its own land
 preflight, prefer it; `SKILL.local.md` is where that is recorded.
 
-3. **Merge/push consent = the stage driver** (D14/D26). `agent` (autonomous) →
-   merge/push **without prompting** (the driver config is the standing consent);
-   `human` (interactive) → confirm first. With **no driver context** (standalone,
+3. **Merge/push consent = the stage oversight** (D14/D26). `agent` (autonomous) →
+   merge/push **without prompting** (the oversight config is the standing consent);
+   `human` (interactive) → confirm first. With **no oversight context** (standalone,
    consent unknown), stop after the commit and report. Never assume consent you
    were given by neither config nor a human.
 
