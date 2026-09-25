@@ -4,6 +4,14 @@ All notable changes to `@defprod/skills` are documented here. The format roughly
 
 The **source of truth for release notes is the [GitHub Releases](https://github.com/defprod1/defprod-skills/releases) page** for this repository. Each entry below mirrors a GitHub Release; click the version heading to read the full body, including any breaking-change upgrade guidance.
 
+## [1.23.1] — 2026-09-25
+
+### Fixed
+
+- **Stage stamps carry the full commit sha.** The six stage skills and `/defprod-change` now say that a `commitSha` attached to a stamp comes from `git rev-parse HEAD`, never `--short`. It is the stamp's idempotency key, and `--short` scales its length with the repo, so two abbreviations of one commit read as two keys. The CI hooks already send the full sha.
+
+See [v1.23.1 release notes](https://github.com/defprod1/defprod-skills/releases/tag/v1.23.1) for the full body.
+
 ## [1.23.0] — 2026-09-24
 
 ### Renamed
@@ -378,4 +386,5 @@ Initial public release.
 [1.20.1]: https://github.com/defprod1/defprod-skills/releases/tag/v1.20.1
 [1.21.0]: https://github.com/defprod1/defprod-skills/releases/tag/v1.21.0
 [1.22.0]: https://github.com/defprod1/defprod-skills/releases/tag/v1.22.0
+[1.23.1]: https://github.com/defprod1/defprod-skills/releases/tag/v1.23.1
 [1.23.0]: https://github.com/defprod1/defprod-skills/releases/tag/v1.23.0
