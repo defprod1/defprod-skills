@@ -77,6 +77,12 @@ point of recording it at all. An older server knows the field as `driver`: if a
 stamp is refused for naming `oversight`, retry with the same value as `driver`,
 and if that is refused too, retry without it. Neither refusal is a stage failure.
 
+**If you pass `commitSha`, pass the full sha.** Take it from `git rev-parse HEAD`
+(or `%H`), never `git rev-parse --short HEAD`. It is the stamp's idempotency key,
+and an abbreviation is a different key for the same commit — worse, `--short`
+scales its length with the repo, so the same commit abbreviates differently over
+time. The server accepts short values only so older records keep validating.
+
 ## Execution mode (autonomous / interactive)
 
 The orchestrator passes a **mode** derived from this stage's `oversight`:

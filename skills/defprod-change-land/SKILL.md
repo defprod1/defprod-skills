@@ -222,6 +222,12 @@ nothing at all — and unattended, nobody sees either until much later.
    never inferred from configuration. An older server knows the field as
    `driver`: if the stamp is refused for naming `oversight`, retry with the same
    value as `driver`, then without it — neither refusal is a failed land.
+
+   **If you pass `commitSha`, pass the full sha** of the commit you just made —
+   `git rev-parse HEAD`, never `--short`. It is the stamp's idempotency key; an
+   abbreviation is a different key for the same commit, and `--short` scales its
+   length with the repo, so it is not even stable. The CI hooks already send the
+   full sha, and a landing stamp should match them.
    - **Branch/PR flow**: push the `chg/<slug>/CHG-NN-*` branch and open/hand off the
      PR. If **you** compose the PR title/body, render any change-key mention
      per the same *Change-key qualification* rule as the commit subject/body

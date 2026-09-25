@@ -769,6 +769,10 @@ Repeat until the pipeline ends or control leaves the agent:
      rule caught the rest), and the flag is what tells the stage that a blocker
      must become a review item rather than a question or a guess.
 
+     If you attach a `commitSha` to any stamp, it is the **full** sha
+     (`git rev-parse HEAD`), never `--short` — the stage skills say the same, and
+     the CI hooks already send the full form.
+
      **Dispatching `merge` or `push` unattended, say so explicitly**: pass
      `allowUnattendedLand=true` with the mode. Reaching that dispatch at all
      means the stop rule re-read the field and found it set, and `/defprod-change-land`
