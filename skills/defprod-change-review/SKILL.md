@@ -103,6 +103,27 @@ Where the workflow below says "raise … with the user" / "ask the user", that i
 the **interactive** path — in **autonomous** mode fix clear-cut defects and
 proceed, recording accepted judgement calls in the finish note.
 
+### Prepare mode (unattended, ahead of a human review)
+
+The orchestrator passes **`mode=prepare`** when an unattended run reaches a
+`review` stage that a person must take — nobody is in the session to finish it,
+but the reviewer should not start from a blank diff. In this mode:
+
+- **Stamp nothing.** Do not call `startChangeStage`, `finishChangeStage` or
+  `cancelChangeStage` for `review`. Oversight is first-report-wins, so a start
+  stamped here would record the review as the agent's when a person is the one
+  who will finish it.
+- **Change nothing.** Run Workflow steps 1–5 (scope, context, lenses, confidence
+  pass, ranking) but do not fix findings, not even clear-cut ones. The change has
+  passed its test stage, and code altered now would reach the reviewer untested.
+  The person decides what to fix.
+- **Return the ranked findings** to the orchestrator: severity, `file:line`, what
+  is wrong and why, and the suggested fix, or `no findings`. The orchestrator
+  records them in the parked commit and the exit report.
+
+Prepare mode never produces a verdict. The review is finished by the person who
+picks the change up, in interactive mode.
+
 ### Blocked in an unattended run
 
 The orchestrator passes **`unattended`** alongside the mode when there is nobody

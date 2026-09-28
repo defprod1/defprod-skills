@@ -301,22 +301,41 @@ the work **is** the claim.
 
 Inside Step 6's loop, **before dispatching any stage**:
 
-- **The next enabled stage's resolved oversight is `human`** → **park**. Do not
-  dispatch it, in any mode. The run exits cleanly, leaving the change active at
-  that position.
+- **The next enabled stage is `review` and its resolved oversight is `human`** →
+  **prepare the review, then park.** Invoke `/defprod-change-review` with
+  `mode=prepare` and `unattended`. It runs the review lenses over the diff and
+  returns its findings **without stamping the stage and without changing code**.
+  Do not call `startChangeStage` for `review` yourself either: oversight is
+  first-report-wins, and a start stamped by this run would record the review as
+  the agent's when a person is the one who will finish it. Put the findings in the
+  interim commit (see *Parking*) and in the exit report, then park with `review`
+  not yet started. The person who picks the change up runs `review` as a `human`
+  stage, with the agent's findings to work from.
+- **Any other next enabled stage whose resolved oversight is `human`** →
+  **park**. Do not dispatch it, in any mode. The run exits cleanly, leaving the
+  change active at that position.
 - **The next enabled stage is `merge` or `push`** → park **unless**
   `allowUnattendedLand` is set on the repo, re-read at that moment. This holds
   whatever the band said: an all-`agent` band still parks before landing until a
-  repository opts in.
+  repository opts in. On a server that holds marked changes for a person (Step
+  3), a change reaches this point with `review` already `human`, so the run parks
+  at `review` first. This rule is the backstop for a change that carries no mark.
 - **The next enabled stage's oversight is `cicd`** → hand off exactly as an
   interactive run does; where the pipeline has landing stages, they already went
   through the permission above. If the pipeline enables none and the run arrives
   here having pushed nothing, say so plainly rather than reporting a hand-off:
   there is nothing for CI to pick up.
 
-**Parking needs no new state.** An active change whose next stage carries `human`
-oversight **is** the parked state, and `/defprod-change` resumes from a change's
-recorded position. There is nothing to invent, and nothing to patch.
+**Parking needs no new state beyond the mark.** An active change whose next stage
+carries `human` oversight **is** the parked state, and `/defprod-change` resumes
+from a change's recorded position. A park caused only by landing not being
+permitted is the exception: its next stage is `agent`, so on its own it looks
+exactly like a change in mid-flight, and the next session to pick it up would
+land it without stopping. The `unattended` mark from Step 3 is what closes that
+gap. With it, the server turns the change's `review` `human` for as long as
+landing is not permitted, so every park before landing is also a park at a
+`human` stage. Without it (an older server), say plainly in the exit report that
+nothing will stop the next session at review.
 
 A risk **rise** mid-run is this rule working, not fighting it: where the repo
 grants the confirmed pipeline authority, a re-score into a stricter band can turn a
@@ -332,6 +351,12 @@ Parking is three things, in order:
    `Change: <product-slug>/CHG-NN:<last-finished-stage>` (probe for suffix support
    first, exactly as `defprod-change-design` documents). An unsuffixed trailer
    here would let a commit that delivered half a change walk it to `ship` forever.
+
+   Where the run prepared a `review` (the stop rule above), put the findings in
+   this commit's body under a heading such as `Agent review (unattended, not a
+   sign-off):`, one line per finding with its severity and location, or `no
+   findings`. The reviewer reads them from the branch. They are the agent's pass,
+   never the human review itself.
 
    **Do not merge, do not push, do not open a pull request.** Those are the
    landing stages, and parking is what happens because they were not permitted.
@@ -415,7 +440,7 @@ Every unattended run ends by naming one outcome, then the detail behind it:
 | Outcome | Means |
 |---|---|
 | `claimed-none` | Nothing eligible, or the parked cap is reached. Not an error. |
-| `parked` | The change is active at a stage a person must take. Name change, stage, reason, branch. |
+| `parked` | The change is active at a stage a person must take. Name change, stage, reason, branch, and — where the run prepared the review — the agent's findings. |
 | `blocked` | A review item was raised. Name the change, and reproduce the item's body as above — its id and path alone are not the report. |
 | `handed-to-cicd` | The pipeline reached its CI/CD boundary. |
 | `shipped` | The pipeline ran to completion. |
@@ -544,6 +569,23 @@ duplicate creation against active changes.
 
 Otherwise call `createChange` with `{ productId, title, type, intent,
 source: 'external' | 'internal', origin: { system, ref, url } }`.
+
+**Under `--unattended`, mark the change as unattended work.** Pass
+`unattended: true` to `createChange`. Where dedupe resumed an existing active
+change instead, mark it with `patchChange` — `[{ op: 'add', path: '/unattended',
+value: true }]` — before dispatching any stage. The mark is one-way (the server
+never lets it be cleared), and it is what lets the server hold the change for a
+person: while the repository does not set `allowUnattendedLand`, the pipeline in
+force for a marked change requires `human` oversight at `review` (or, with
+`review` off, at the first enabled landing stage), whatever its risk band says,
+and `getChange` reports `unattendedReviewGate: true`. That requirement is
+recorded on the change, so it binds whoever picks the change up next, not just
+this run.
+
+**An older server does not know the field.** If `createChange` or `patchChange`
+is refused for naming `unattended`, retry without it and carry on, but say so in
+the exit report: the change carries no mark, so a later session will read its
+pipeline as the band left it and may land it without stopping for a person.
 
 **`origin` and `source` are independent — never condition one on the other.**
 They answer different questions:
@@ -995,6 +1037,11 @@ operation belongs to `ship` and to cancellation alone.
   `maxParkedUnattendedChanges` is reached — `0` is a value, not an absence. Read
   all three **live**, so withdrawal bites work already in flight. Absence of a
   field means *nobody said*, which is never permission.
+- **Unattended: mark the change, and prepare a human review rather than skip it.**
+  Pass `unattended: true` at creation (or patch it on when resuming), so the
+  server holds the change for a person while landing is not permitted. At a
+  `human` `review`, run the review in `prepare` mode, record its findings in the
+  parked commit, and leave the stage unstarted for the person who finishes it.
 - **Unattended: release the pin when the change parks.** A parked change is
   hands-on for a person elsewhere, so the worktree is free — hold the pin and the
   runner deadlocks after exactly one change. The pin is a **lock**; the bound on
