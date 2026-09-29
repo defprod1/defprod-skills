@@ -4,6 +4,19 @@ All notable changes to `@defprod/skills` are documented here. The format roughly
 
 The **source of truth for release notes is the [GitHub Releases](https://github.com/defprod1/defprod-skills/releases) page** for this repository. Each entry below mirrors a GitHub Release; click the version heading to read the full body, including any breaking-change upgrade guidance.
 
+## [1.24.0] — 2026-09-28
+
+### Added
+
+- **Unattended runs mark their changes.** `/defprod-change --unattended` sends `unattended: true` when it creates a change, and patches it on when it resumes one. While the repository does not set `allowUnattendedLand`, a server that supports the mark holds the change for a person at `review`.
+- **`prepare` mode for `/defprod-change-review`.** It returns ranked review findings, stamps nothing and changes no code.
+
+### Changed
+
+- **A human review is prepared, not skipped.** At a `human` review, an unattended run runs the review in `prepare` mode, records the findings in the parked commit and the exit report, and leaves the stage unstarted for the person who finishes it.
+
+See [v1.24.0 release notes](https://github.com/defprod1/defprod-skills/releases/tag/v1.24.0) for the full body.
+
 ## [1.23.1] — 2026-09-25
 
 ### Fixed
@@ -388,3 +401,4 @@ Initial public release.
 [1.22.0]: https://github.com/defprod1/defprod-skills/releases/tag/v1.22.0
 [1.23.1]: https://github.com/defprod1/defprod-skills/releases/tag/v1.23.1
 [1.23.0]: https://github.com/defprod1/defprod-skills/releases/tag/v1.23.0
+[1.24.0]: https://github.com/defprod1/defprod-skills/releases/tag/v1.24.0
