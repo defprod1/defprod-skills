@@ -4,6 +4,16 @@ All notable changes to `@defprod/skills` are documented here. The format roughly
 
 The **source of truth for release notes is the [GitHub Releases](https://github.com/defprod1/defprod-skills/releases) page** for this repository. Each entry below mirrors a GitHub Release; click the version heading to read the full body, including any breaking-change upgrade guidance.
 
+## [1.25.0] — 2026-09-30
+
+### Changed
+
+- **A prepared unattended review is stamped as started.** At a `human` review, an unattended run stamps the review's start with `oversight: human`, runs it in `prepare` mode, and parks with the review in progress for the person who finishes it, as an attended review waits for approval.
+- **The parked-work count includes an open human stage**, so stamping the start cannot loosen `maxParkedUnattendedChanges`.
+- **The stage loop takes an in-progress stage** rather than skipping past it.
+
+See [v1.25.0 release notes](https://github.com/defprod1/defprod-skills/releases/tag/v1.25.0) for the full body.
+
 ## [1.24.0] — 2026-09-28
 
 ### Added
@@ -401,4 +411,5 @@ Initial public release.
 [1.22.0]: https://github.com/defprod1/defprod-skills/releases/tag/v1.22.0
 [1.23.1]: https://github.com/defprod1/defprod-skills/releases/tag/v1.23.1
 [1.23.0]: https://github.com/defprod1/defprod-skills/releases/tag/v1.23.0
+[1.25.0]: https://github.com/defprod1/defprod-skills/releases/tag/v1.25.0
 [1.24.0]: https://github.com/defprod1/defprod-skills/releases/tag/v1.24.0
