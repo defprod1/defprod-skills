@@ -236,9 +236,14 @@ the work **is** the claim.
    of them. Keep the rows still active (not shipped, not cancelled) that **this
    runner created**: no field marks a change unattended, so *its* changes are the
    ones whose `createdBy` is the identity this run authenticates as. `getChange`
-   each one, resolve its next enabled stage exactly as the loop does, and count it
-   **parked** when that stage's oversight is `human`. A change a person has since
-   carried past its human stage is no longer waiting on anyone here.
+   each one, resolve the stage it is waiting on exactly as the loop does, and count
+   it **parked** when that stage's oversight is `human` and it is either not
+   started **or in progress**. The in-progress case is the review this mode
+   prepares: its start is stamped and it is left open for a person, and a person
+   already working it still holds one of this runner's places. An in-progress stage
+   under `agent` oversight is live work, not a park, so it is not counted. A change
+   a person has since carried past its human stage is no longer waiting on anyone
+   here.
 
    Where the run genuinely cannot tell its own changes apart, count **every**
    parked active change in the repository instead. Over-counting only ever claims
@@ -302,15 +307,25 @@ the work **is** the claim.
 Inside Step 6's loop, **before dispatching any stage**:
 
 - **The next enabled stage is `review` and its resolved oversight is `human`** →
-  **prepare the review, then park.** Invoke `/defprod-change-review` with
+  **prepare the review, then park.** Call `startChangeStage { changeId, stage:
+  'review', oversight: 'human' }`, then invoke `/defprod-change-review` with
   `mode=prepare` and `unattended`. It runs the review lenses over the diff and
-  returns its findings **without stamping the stage and without changing code**.
-  Do not call `startChangeStage` for `review` yourself either: oversight is
-  first-report-wins, and a start stamped by this run would record the review as
-  the agent's when a person is the one who will finish it. Put the findings in the
-  interim commit (see *Parking*) and in the exit report, then park with `review`
-  not yet started. The person who picks the change up runs `review` as a `human`
-  stage, with the agent's findings to work from.
+  returns its findings **without finishing the stage and without changing code**.
+  Put the findings in the interim commit (see *Parking*) and in the exit report,
+  then park with `review` **in progress**. Never finish or cancel it: the person
+  who picks the change up finishes `review` as a `human` stage, with the agent's
+  findings to work from.
+
+  This is the same record an attended review leaves. There, the stage skill stamps
+  the start when the agent begins its pass, reports `human` (the oversight the
+  stage actually receives), and then waits an unrecorded, open-ended time for the
+  person's approval before it finishes. The prepare pass is the same work followed
+  by the same wait, so it is stamped the same way. Leaving it unstarted would make
+  a prepared review read as though none had happened.
+
+  **Where `review` is already in progress under `human` oversight** when an
+  unattended run reaches it (a named-ticket run on a change that is already
+  parked), the review has been prepared. Park again without re-preparing it.
 - **Any other next enabled stage whose resolved oversight is `human`** →
   **park**. Do not dispatch it, in any mode. The run exits cleanly, leaving the
   change active at that position.
@@ -327,7 +342,8 @@ Inside Step 6's loop, **before dispatching any stage**:
   there is nothing for CI to pick up.
 
 **Parking needs no new state beyond the mark.** An active change whose next stage
-carries `human` oversight **is** the parked state, and `/defprod-change` resumes
+carries `human` oversight, or whose `human` stage is in progress, **is** the parked
+state, and `/defprod-change` resumes
 from a change's recorded position. A park caused only by landing not being
 permitted is the exception: its next stage is `agent`, so on its own it looks
 exactly like a change in mid-flight, and the next session to pick it up would
@@ -790,7 +806,11 @@ Repeat until the pipeline ends or control leaves the agent:
    **Under `--unattended` there is no overlay**, by design: the whole point of
    that mode is that the category governs, so the resolved pipeline stands as the
    server gave it.
-2. Determine the next enabled stage after the current position.
+2. Determine the stage to take: the current stage itself when it is **in
+   progress** (a parked `review` left open for a person, or work a previous
+   session did not finish), otherwise the next enabled stage after the current
+   position. Re-dispatching an in-progress stage re-stamps its start harmlessly,
+   because the first report wins.
    - No next stage → the change is shipped or at pipeline end; go to Step 7.
 3. **Under `--unattended`, apply the stop rule first** (see *Unattended runs*):
    a next stage whose resolved oversight is `human` **parks the change** and ends
@@ -1040,8 +1060,9 @@ operation belongs to `ship` and to cancellation alone.
 - **Unattended: mark the change, and prepare a human review rather than skip it.**
   Pass `unattended: true` at creation (or patch it on when resuming), so the
   server holds the change for a person while landing is not permitted. At a
-  `human` `review`, run the review in `prepare` mode, record its findings in the
-  parked commit, and leave the stage unstarted for the person who finishes it.
+  `human` `review`, stamp its start with `oversight: human`, run it in `prepare`
+  mode, record the findings in the parked commit, and leave the stage in progress
+  for the person who finishes it, exactly as an attended review waits for approval.
 - **Unattended: release the pin when the change parks.** A parked change is
   hands-on for a person elsewhere, so the worktree is free — hold the pin and the
   runner deadlocks after exactly one change. The pin is a **lock**; the bound on

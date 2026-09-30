@@ -109,10 +109,12 @@ The orchestrator passes **`mode=prepare`** when an unattended run reaches a
 `review` stage that a person must take — nobody is in the session to finish it,
 but the reviewer should not start from a blank diff. In this mode:
 
-- **Stamp nothing.** Do not call `startChangeStage`, `finishChangeStage` or
-  `cancelChangeStage` for `review`. Oversight is first-report-wins, so a start
-  stamped here would record the review as the agent's when a person is the one
-  who will finish it.
+- **Stamp the start, never the end.** Call `startChangeStage { changeId, stage:
+  'review', oversight: 'human' }` before running the lenses (the orchestrator will
+  usually have stamped it already; a second start is a no-op). Never call
+  `finishChangeStage` or `cancelChangeStage`: the stage stays in progress for the
+  person who finishes it. This is the record interactive mode leaves while it
+  waits for approval, and `human` is the oversight the stage actually receives.
 - **Change nothing.** Run Workflow steps 1–5 (scope, context, lenses, confidence
   pass, ranking) but do not fix findings, not even clear-cut ones. The change has
   passed its test stage, and code altered now would reach the reviewer untested.
