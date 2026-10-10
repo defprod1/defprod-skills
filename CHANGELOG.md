@@ -4,6 +4,14 @@ All notable changes to `@defprod/skills` are documented here. The format roughly
 
 The **source of truth for release notes is the [GitHub Releases](https://github.com/defprod1/defprod-skills/releases) page** for this repository. Each entry below mirrors a GitHub Release; click the version heading to read the full body, including any breaking-change upgrade guidance.
 
+## [1.25.1] — 2026-10-10
+
+### Fixed
+
+- **`/defprod-sync-story-test-status` matches `@defprod/scripts` 2.0.0.** `--skip-run` requires `--dry-run` (a coverage-only run never posts), `--adopt-only` is documented, and a covered story with no result in the current run posts as not run.
+
+See [v1.25.1 release notes](https://github.com/defprod1/defprod-skills/releases/tag/v1.25.1) for the full body.
+
 ## [1.25.0] — 2026-09-30
 
 ### Changed
@@ -411,5 +419,6 @@ Initial public release.
 [1.22.0]: https://github.com/defprod1/defprod-skills/releases/tag/v1.22.0
 [1.23.1]: https://github.com/defprod1/defprod-skills/releases/tag/v1.23.1
 [1.23.0]: https://github.com/defprod1/defprod-skills/releases/tag/v1.23.0
+[1.25.1]: https://github.com/defprod1/defprod-skills/releases/tag/v1.25.1
 [1.25.0]: https://github.com/defprod1/defprod-skills/releases/tag/v1.25.0
 [1.24.0]: https://github.com/defprod1/defprod-skills/releases/tag/v1.24.0
