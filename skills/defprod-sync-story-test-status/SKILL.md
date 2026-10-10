@@ -52,7 +52,10 @@ The script understands multiple harnesses in a single invocation: Playwright (UI
 | `--project <list>` | Optional. Comma-separated Playwright project names; overrides `DEFPROD_PLAYWRIGHT_PROJECTS`. |
 | `--env-file <path>` | Optional. Override the default env-file location (default `~/.config/defprod/prod.env` or `DEFPROD_ENV_FILE`). |
 | `--dry-run` | Optional. Run coverage + tests but print the payload instead of POSTing. |
-| `--skip-run` | Optional. Check coverage only; do not execute the harnesses. Fast way to refresh the covered/uncovered flags. |
+| `--skip-run` | Optional. Check coverage only; do not execute the harnesses. **Requires `--dry-run`** — a run that measured no results never posts. |
+| `--adopt-only` | Optional. Never execute a suite: parse only reports passed with `--adopt-report`, and post a suite with no report as not run. Use when CI owns test execution. |
+
+**Every posted result comes from this run alone.** A covered story the run produced no result for — quarantined, filtered out, or absent from an adopted report — is posted as *not run*. Nothing is carried over from an earlier sync.
 
 ## Multi-area sync safety
 
@@ -95,7 +98,7 @@ Invoke from the repository root so relative paths in the env file resolve correc
   [--test-suites <list>] \
   [--project <list>] \
   [--dry-run] \
-  [--skip-run]
+  [--skip-run --dry-run]
 ```
 
 For each suite listed in `DEFPROD_TEST_SUITES`, the script will:
@@ -128,4 +131,4 @@ If `--dry-run` was used, point out that nothing was written and offer to re-run 
 - **Confirmation is mandatory** for production writes — bypass only when the user explicitly passed `--dry-run`.
 - **Honor `--area-key` for partial syncs.** Without it, the script's `areaKeys` payload list spans the full product, which triggers orphan-delete in every area. Use `--area-key` when only some of the suites are being run.
 - **Do not start or stop dev servers** from this skill. Assume the project's harness prerequisites are already met.
-- **Do not retry on partial failure** beyond one re-run with `--skip-run` to refresh coverage flags only. Test failures should be investigated, not papered over.
+- **Do not retry on partial failure.** Test failures should be investigated, not papered over. A `--skip-run --dry-run` pass is a safe way to inspect coverage, but it posts nothing.
