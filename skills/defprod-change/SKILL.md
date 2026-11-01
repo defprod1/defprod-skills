@@ -20,6 +20,7 @@ allowed-tools:
   - mcp__defprod__createChange
   - mcp__defprod__listChanges
   - mcp__defprod__getChange
+  - mcp__defprod__getChangeGroup
   - mcp__defprod__patchChange
   - mcp__defprod__startChangeStage
   - mcp__defprod__finishChangeStage
@@ -584,7 +585,8 @@ prefer `reopenChange` over creating anew. The server independently rejects
 duplicate creation against active changes.
 
 Otherwise call `createChange` with `{ productId, title, type, intent,
-source: 'external' | 'internal', origin: { system, ref, url } }`.
+source: 'external' | 'internal', origin: { system, ref, url } }`, plus
+`changeGroupId` when the ticket names a group (see *The change group* below).
 
 **Under `--unattended`, mark the change as unattended work.** Pass
 `unattended: true` to `createChange`. Where dedupe resumed an existing active
@@ -620,6 +622,44 @@ tidy omission: the ticket records the change key, the change records nothing,
 and the change's own detail view has no origin to show. Treating
 `source: external` as the trigger for setting `origin` is the specific mistake
 that produces it.
+
+#### The change group — only when the tracker says so
+
+A team can collect related changes into a **change group** (a programme, keyed
+`GRP-NN`, scoped to the team). A change belongs to no group or exactly one.
+Membership is set at creation by passing `changeGroupId` to `createChange`, and
+the orchestrator does that **only on a hint from the ticket**. It never asks
+"which group?" unprompted: that question on every change is friction, and most
+changes belong to no group.
+
+The adapter's `fetch` may return two optional hints:
+
+- **`changeGroup`** — a group key such as `GRP-07`, which the ticket carries
+  explicitly (a field on the ticket, or an epic the adapter maps to a group).
+  Resolve it with `getChangeGroup { teamId, key }`. `teamId` is the product's
+  team, from `getProduct`. Pass the group's `_id` as `changeGroupId`. Nobody is
+  asked: the ticket is the person's decision, already written down.
+- **`parentChange`** — the change whose work surfaced this ticket, as a change key.
+  When there is no `changeGroup` hint, `getChange` the parent (resolve its
+  product from the key's slug, or use this change's product when the key is
+  bare). If the parent is in a group and the group is open, **offer it, defaulting
+  to yes**: *"<parent key> is in GRP-07 <name>. Put this change in it too?"* Under
+  `--auto-all` or `--unattended`, take the default without asking.
+
+Neither hint, or a hint that does not resolve → create the change without a
+group and say nothing more. Membership can always be set later, by a person, on
+the change or the group page.
+
+**A group hint never blocks the change.** A key that does not resolve, a group
+that is closed, a group in another team, or a parent that cannot be read all
+lead to the same result: create the change with no group and name the reason in
+your summary (or in the exit report when unattended). If `createChange` refuses
+because of `changeGroupId`, retry once without it. An older server that does not
+know the field refuses it the same way, so the retry covers that case too.
+
+**On resume, leave membership alone.** When dedupe resumed an existing change,
+do not apply the hint. The change's group may have been set or cleared on
+purpose since it was created.
 
 ### Step 4 — Establish the change context
 

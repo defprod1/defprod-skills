@@ -56,6 +56,21 @@ two-way link rather than a one-way note in your tracker. It is **independent of
 `source`**: work the team raised in its own backlog is internal *and* has an
 origin.
 
+**Optionally, two grouping hints.** Report them only when the ticket really
+carries them. A ticket with neither is the normal case:
+
+- **`changeGroup`**: the DefProd change group key (`GRP-07`) the ticket names
+  explicitly. It can be a field on the ticket, or a parent item (an epic, a
+  project) that your team maps to a group. `/defprod-change` puts the new change
+  in that group without asking.
+- **`parentChange`**: the DefProd change key whose work surfaced this ticket,
+  when the ticket records it. `/defprod-change` offers that change's group,
+  defaulting to yes.
+
+Never infer either one from wording. A ticket that merely *mentions* a change
+or a group was not necessarily spawned by it, and a wrong hint files work into
+the wrong programme.
+
 **Your tracker:** _describe how to fetch a ticket here._
 
 ### 2. `link(ref, changeKey)` — mark the ticket promoted
@@ -121,7 +136,9 @@ frontmatter including `status:` and `link:` fields.
 
 - **fetch**: `Read` the intent file by ref (e.g. `INT0007` →
   `~/team-brain/intents/INT0007-*.md`). Title = H1; intent material = body.
-  Already-promoted check: frontmatter `link:` is non-empty.
+  Already-promoted check: frontmatter `link:` is non-empty. Grouping hints:
+  an optional `changeGroup: GRP-07` frontmatter field → `changeGroup`; an
+  optional `parentChange:` field → `parentChange`.
 - **link**: set frontmatter `link: <changeKey>` and `status: promoted`; commit.
 - **close**: set `status: done` (or `dropped`), append an outcome line; commit.
 - **listClaimable**: `grep` the files with `status: open` and an empty `link:`.
@@ -135,7 +152,9 @@ Assumes a JIRA/Atlassian MCP server is connected.
 
 - **fetch**: get the issue by key; title = summary, url = browse link, intent
   material = description + recent comments. Already-promoted check: look for a
-  `DefProd: <changeKey>` label or comment.
+  `DefProd: <changeKey>` label or comment. Grouping hint: if your team keeps a
+  map from epics to change groups (`EPIC-12 → GRP-03`), the issue's epic →
+  `changeGroup`.
 - **link**: add a comment `Promoted to DefProd as <changeKey>` (or set a custom
   field / label if your project has one).
 - **close**: add a comment `Shipped as <changeKey>` / `Cancelled (<changeKey>)`; or
@@ -147,7 +166,8 @@ Assumes a JIRA/Atlassian MCP server is connected.
 ### Example C — Notion via an MCP connector
 
 - **fetch**: read the page by URL/id; title = page title, intent material =
-  page content. Already-promoted check: a `DefProd change` property.
+  page content. Already-promoted check: a `DefProd change` property. Grouping
+  hint: a `DefProd group` property → `changeGroup`.
 - **link**: set the `DefProd change` property to `<changeKey>`.
 - **close**: set the page status property and append an outcome block.
 - **listClaimable**: query the database for the ready status with an empty
