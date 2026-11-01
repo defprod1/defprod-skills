@@ -4,6 +4,14 @@ All notable changes to `@defprod/skills` are documented here. The format roughly
 
 The **source of truth for release notes is the [GitHub Releases](https://github.com/defprod1/defprod-skills/releases) page** for this repository. Each entry below mirrors a GitHub Release; click the version heading to read the full body, including any breaking-change upgrade guidance.
 
+## [1.26.0] — 2026-11-01
+
+### Added
+
+- **A change can join its ticket's change group.** The tracker adapter's `fetch` may report a `changeGroup` key (`GRP-NN`) or a `parentChange`. `/defprod-change` passes a named group to `createChange` without asking. It offers a parent change's open group, defaulting to yes. A hint that does not resolve never blocks the change, and resumed changes keep their membership.
+
+See [v1.26.0 release notes](https://github.com/defprod1/defprod-skills/releases/tag/v1.26.0) for the full body.
+
 ## [1.25.1] — 2026-10-10
 
 ### Fixed
@@ -419,6 +427,7 @@ Initial public release.
 [1.22.0]: https://github.com/defprod1/defprod-skills/releases/tag/v1.22.0
 [1.23.1]: https://github.com/defprod1/defprod-skills/releases/tag/v1.23.1
 [1.23.0]: https://github.com/defprod1/defprod-skills/releases/tag/v1.23.0
+[1.26.0]: https://github.com/defprod1/defprod-skills/releases/tag/v1.26.0
 [1.25.1]: https://github.com/defprod1/defprod-skills/releases/tag/v1.25.1
 [1.25.0]: https://github.com/defprod1/defprod-skills/releases/tag/v1.25.0
 [1.24.0]: https://github.com/defprod1/defprod-skills/releases/tag/v1.24.0
