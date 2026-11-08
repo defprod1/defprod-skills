@@ -20,7 +20,23 @@ To install skills to a different directory, use `--skills-dir` or set `skillsDir
 
 - An AI coding agent that supports `.claude/skills/` — [Claude Code](https://claude.ai/claude-code), [Cursor](https://cursor.com), or [OpenCode](https://github.com/opencode-ai/opencode)
 - A [DefProd](https://defprod.com) account with at least one product
-- The DefProd MCP server connected to your agent ([setup guide](https://defprod.com/docs/mcp))
+- The DefProd MCP server connected to your agent ([setup guide](https://docs.defprod.one/get-started/), or run the `defprod-get-started` skill)
+
+## Install as a Claude Code plugin
+
+In Claude Code, one command installs the DefProd MCP server **and** every official skill. No separate `claude mcp add`, and no restart:
+
+```
+/plugin install defprod --marketplace defprod1/defprod-skills
+```
+
+(On Claude Code older than 2.1.275: `/plugin marketplace add defprod1/defprod-skills`, then `/plugin install defprod@defprod`.)
+
+Then ask Claude to set you up with DefProd, or run `/defprod:defprod-get-started`. It walks you through creating an account (or signing in) and connecting, then onboards your repository. You type your password, email code and card details only into DefProd's and Stripe's own pages, never into the chat.
+
+The plugin adds the server by its address alone (`https://mcp.defprod.one/mcp`); no key or token is written anywhere. Plugin skills are namespaced `defprod:<skill>`, and the plugin's version always matches this package's.
+
+New to DefProd with no agent setup at all? The guide at [docs.defprod.one/get-started](https://docs.defprod.one/get-started/) covers every route.
 
 ## Install
 

@@ -1,0 +1,18 @@
+{
+  "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
+  "name": "defprod",
+  "description": "DefProd's Claude Code plugin: the DefProd MCP server and DefProd skills.",
+  "owner": {
+    "name": "DefProd",
+    "url": "https://defprod.one"
+  },
+  "plugins": [
+    {
+      "name": "defprod",
+      "description": "The DefProd MCP server plus every official DefProd skill. Start with /defprod:defprod-get-started.",
+      "source": "./",
+      "category": "development",
+      "homepage": "https://docs.defprod.one/get-started/"
+    }
+  ]
+}

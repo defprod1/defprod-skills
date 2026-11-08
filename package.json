@@ -37,7 +37,8 @@
   "scripts": {
     "generate-manifest": "node scripts/generate-manifest.js",
     "verify": "node scripts/verify-skills.js",
-    "prepublishOnly": "node scripts/generate-manifest.js && node scripts/verify-skills.js"
+    "prepublishOnly": "node scripts/generate-manifest.js && node scripts/verify-skills.js",
+    "version": "node scripts/sync-plugin-version.js"
   },
   "engines": {
     "node": ">=18"

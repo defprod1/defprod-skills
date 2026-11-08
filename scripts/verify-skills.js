@@ -8,7 +8,10 @@
  * 2. Scaffolding removal — contrib skills must not contain {{placeholders}} or <!-- comments -->
  * 3. MCP tool name cross-reference — every mcp__defprod__* reference matches a known tool
  * 4. Config key consistency — defprod.json keys mentioned in skills are documented in README
- * 5. Installer smoke test — run install into a temp dir, verify files land correctly
+ * 5. retired-skills.json shape
+ * 6. Local-extensions pointer block in every official skill
+ * 7. Claude Code plugin manifests — valid, version in step with package.json, server added by address only
+ * 8. Installer smoke test — run install into a temp dir, verify files land correctly and no plugin manifest leaks
  */
 
 const fs = require('fs');
@@ -125,7 +128,7 @@ const KNOWN_MCP_TOOLS = [
   'createArchitectureElement', 'createArea', 'createProduct', 'createRepo', 'createUserStory',
   'deleteArchitectureElement', 'deleteArea', 'deleteProduct', 'deleteRepo', 'deleteUserStory',
   'getArchitectureForProduct', 'getArchitectureTree', 'getArea',
-  'getBriefForProduct', 'getProduct', 'getRepo', 'getUserStory',
+  'getBriefForProduct', 'getProduct', 'getRepo', 'getUserStory', 'whoAmI',
   'listAreas', 'listProducts', 'listRepos', 'listUserStories',
   'createChange', 'listChanges', 'listTeamChanges', 'getChange', 'patchChange', 'deleteChange',
   'startChangeStage', 'finishChangeStage', 'cancelChangeStage', 'cancelChange', 'reopenChange',
@@ -266,9 +269,80 @@ for (const dir of skillDirs) {
   }
 }
 
-// --- 7. Installer smoke test ---
+// --- 7. Claude Code plugin manifests ---
 
-console.log('\n7. Installer smoke test');
+// The repo root is itself a Claude Code plugin (skills/ is the plugin's skills
+// dir) and its own one-plugin marketplace. A broken manifest breaks every
+// plugin install, and the MCP entry must never carry a secret.
+console.log('\n7. Claude Code plugin manifests');
+
+const PLUGIN_DIR = path.join(ROOT, '.claude-plugin');
+const PLUGIN_JSON = path.join(PLUGIN_DIR, 'plugin.json');
+const MARKETPLACE_JSON = path.join(PLUGIN_DIR, 'marketplace.json');
+
+function readJson(file, label) {
+  if (!fs.existsSync(file)) {
+    fail(`${label} not found`);
+    return null;
+  }
+  try {
+    return JSON.parse(fs.readFileSync(file, 'utf8'));
+  } catch (e) {
+    fail(`${label} — not valid JSON: ${e.message}`);
+    return null;
+  }
+}
+
+const pluginDoc = readJson(PLUGIN_JSON, '.claude-plugin/plugin.json');
+const marketplaceDoc = readJson(MARKETPLACE_JSON, '.claude-plugin/marketplace.json');
+const packageVersion = JSON.parse(fs.readFileSync(path.join(ROOT, 'package.json'), 'utf8')).version;
+
+if (pluginDoc) {
+  if (pluginDoc.name !== 'defprod') {
+    fail(`plugin.json — name is "${pluginDoc.name}", expected "defprod"`);
+  }
+  if (pluginDoc.version !== packageVersion) {
+    fail(`plugin.json — version ${pluginDoc.version} != package.json ${packageVersion} (run: node scripts/sync-plugin-version.js)`);
+  } else {
+    pass(`plugin.json — version ${pluginDoc.version} matches package.json`);
+  }
+
+  const servers = pluginDoc.mcpServers || {};
+  const server = servers.defprod;
+  if (!server) {
+    fail('plugin.json — mcpServers.defprod missing');
+  } else {
+    if (server.type !== 'http') fail(`plugin.json — mcpServers.defprod.type is "${server.type}", expected "http"`);
+    if (server.url !== 'https://mcp.defprod.one/mcp') fail(`plugin.json — mcpServers.defprod.url is "${server.url}"`);
+    const extra = Object.keys(server).filter(k => k !== 'type' && k !== 'url');
+    if (extra.length > 0) {
+      fail(`plugin.json — mcpServers.defprod carries ${extra.join(', ')}: the server is added by its address alone, never with headers, env or a key`);
+    } else {
+      pass('plugin.json — defprod server added by address only');
+    }
+  }
+  const others = Object.keys(servers).filter(k => k !== 'defprod');
+  if (others.length > 0) fail(`plugin.json — unexpected MCP servers: ${others.join(', ')}`);
+  if (fs.existsSync(path.join(ROOT, '.mcp.json'))) {
+    fail('.mcp.json at the repo root — keep the plugin\'s server in plugin.json so the repo itself does not prompt for it');
+  }
+}
+
+if (marketplaceDoc && pluginDoc) {
+  const entries = Array.isArray(marketplaceDoc.plugins) ? marketplaceDoc.plugins : [];
+  const entry = entries.find(p => p.name === pluginDoc.name);
+  if (!entry) {
+    fail(`marketplace.json — no plugin named "${pluginDoc.name}"`);
+  } else if (entry.source !== './') {
+    fail(`marketplace.json — plugin "${entry.name}" source is ${JSON.stringify(entry.source)}, expected "./"`);
+  } else {
+    pass(`marketplace.json — "${marketplaceDoc.name}" lists "${entry.name}" from the repo root`);
+  }
+}
+
+// --- 8. Installer smoke test ---
+
+console.log('\n8. Installer smoke test');
 
 const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'defprod-skills-test-'));
 
@@ -282,6 +356,15 @@ try {
     } else {
       fail(`install — ${dir}/SKILL.md not found after install`);
     }
+  }
+
+  // The plugin's manifests describe this package, not a consumer's repo.
+  const leaked = ['.claude-plugin', path.join('.claude', '.claude-plugin'), path.join('.claude', 'skills', '.claude-plugin')]
+    .filter(p => fs.existsSync(path.join(tmpDir, p)));
+  if (leaked.length > 0) {
+    fail(`install — plugin manifests copied into the target: ${leaked.join(', ')}`);
+  } else {
+    pass('install — no plugin manifests copied into the target');
   }
 } catch (e) {
   fail(`install command failed: ${e.message}`);
