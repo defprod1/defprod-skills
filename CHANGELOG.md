@@ -4,6 +4,16 @@ All notable changes to `@defprod/skills` are documented here. The format roughly
 
 The **source of truth for release notes is the [GitHub Releases](https://github.com/defprod1/defprod-skills/releases) page** for this repository. Each entry below mirrors a GitHub Release; click the version heading to read the full body, including any breaking-change upgrade guidance.
 
+## [1.27.0] — 2026-11-08
+
+### Added
+
+- **`defprod-get-started` skill.** It takes a person from nothing installed to connected to DefProd, then hands over to repository onboarding. It adds the server by its address alone, says what the person will see in the browser and inbox, and treats an authentication timeout after a slow sign-up as the expected re-authenticate. It never handles a password, email code, card or token.
+- **Claude Code plugin.** `/plugin install defprod --marketplace defprod1/defprod-skills` installs the DefProd MCP server and every official skill, namespaced `defprod:*`.
+- **Plugin checks in `npm run verify`.** The plugin's version must match the package's (kept in step by the `npm version` hook). The server must carry no headers or key. The marketplace entry must exist, and the installer must copy no plugin files.
+
+See [v1.27.0 release notes](https://github.com/defprod1/defprod-skills/releases/tag/v1.27.0) for the full body.
+
 ## [1.26.0] — 2026-11-01
 
 ### Added
@@ -427,6 +437,7 @@ Initial public release.
 [1.22.0]: https://github.com/defprod1/defprod-skills/releases/tag/v1.22.0
 [1.23.1]: https://github.com/defprod1/defprod-skills/releases/tag/v1.23.1
 [1.23.0]: https://github.com/defprod1/defprod-skills/releases/tag/v1.23.0
+[1.27.0]: https://github.com/defprod1/defprod-skills/releases/tag/v1.27.0
 [1.26.0]: https://github.com/defprod1/defprod-skills/releases/tag/v1.26.0
 [1.25.1]: https://github.com/defprod1/defprod-skills/releases/tag/v1.25.1
 [1.25.0]: https://github.com/defprod1/defprod-skills/releases/tag/v1.25.0

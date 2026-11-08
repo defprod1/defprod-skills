@@ -1,6 +1,6 @@
 {
   "name": "defprod",
-  "version": "1.26.0",
+  "version": "1.27.0",
   "description": "DefProd for Claude Code: the DefProd MCP server plus every official DefProd skill — get started and connect, onboard a repository, align changes with user stories, generate tests from acceptance criteria, and detect drift between definition and code.",
   "author": {
     "name": "DefProd",
@@ -9,7 +9,13 @@
   "homepage": "https://docs.defprod.one/get-started/",
   "repository": "https://github.com/defprod1/defprod-skills",
   "license": "MIT",
-  "keywords": ["defprod", "product-definition", "user-stories", "mcp", "skills"],
+  "keywords": [
+    "defprod",
+    "product-definition",
+    "user-stories",
+    "mcp",
+    "skills"
+  ],
   "mcpServers": {
     "defprod": {
       "type": "http",
