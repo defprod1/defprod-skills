@@ -4,6 +4,14 @@ All notable changes to `@defprod/skills` are documented here. The format roughly
 
 The **source of truth for release notes is the [GitHub Releases](https://github.com/defprod1/defprod-skills/releases) page** for this repository. Each entry below mirrors a GitHub Release; click the version heading to read the full body, including any breaking-change upgrade guidance.
 
+## [1.28.0] — 2026-11-18
+
+### Added
+
+- **Onboard a repository straight into a template.** `defprod-onboard-product --template` creates the definition as a template ("<Name> Template"). The onboarded repository becomes its starter repo, and the skill proposes a bootstrap command for the author to confirm, edit or skip. It never runs that command. Template mode is opt-in, so onboarding a product is unchanged. (TEMPLATE-17)
+
+See [v1.28.0 release notes](https://github.com/defprod1/defprod-skills/releases/tag/v1.28.0) for the full body.
+
 ## [1.27.0] — 2026-11-08
 
 ### Added
@@ -437,6 +445,7 @@ Initial public release.
 [1.22.0]: https://github.com/defprod1/defprod-skills/releases/tag/v1.22.0
 [1.23.1]: https://github.com/defprod1/defprod-skills/releases/tag/v1.23.1
 [1.23.0]: https://github.com/defprod1/defprod-skills/releases/tag/v1.23.0
+[1.28.0]: https://github.com/defprod1/defprod-skills/releases/tag/v1.28.0
 [1.27.0]: https://github.com/defprod1/defprod-skills/releases/tag/v1.27.0
 [1.26.0]: https://github.com/defprod1/defprod-skills/releases/tag/v1.26.0
 [1.25.1]: https://github.com/defprod1/defprod-skills/releases/tag/v1.25.1
