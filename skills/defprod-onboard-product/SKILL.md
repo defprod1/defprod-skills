@@ -1,6 +1,6 @@
 ---
 name: defprod-onboard-product
-description: Iteratively defines a single product in DefProd — brief, areas, user stories, validation, and architecture. Picks up where it left off on each invocation.
+description: Iteratively defines a single product in DefProd — brief, areas, user stories, validation, and architecture. Picks up where it left off on each invocation. With --template, onboards the repository as a template instead, with the repository as its starter repo.
 allowed-tools:
   - Read
   - Glob
@@ -14,6 +14,8 @@ allowed-tools:
   - mcp__defprod__getProduct
   - mcp__defprod__createProduct
   - mcp__defprod__patchProduct
+  - mcp__defprod__getRepo
+  - mcp__defprod__patchRepo
   - mcp__defprod__getBriefForProduct
   - mcp__defprod__patchBrief
   - mcp__defprod__listAreas
@@ -47,6 +49,9 @@ Brings a product from repository discovery to a complete DefProd definition — 
 ## Inputs
 
 - **Product name** — the name of the product to onboard (must match an entry in `docs/defprod-onboarding.md` or be provided by the user).
+- **Template mode** (optional) — onboard the repository as a **template** rather than a product. It is on when the invocation says so (`/defprod-onboard-product <name> --template`) or the user says in plain words that this is a template, e.g. "onboard this starter repo as a template". It is **off otherwise**, and in that case do not ask: the skill onboards a regular product exactly as it always has.
+
+  A template is a product definition with `isTemplate: true` that others copy to start new products. When it is linked to a repository, that repository is its **starter repo**: `/defprod-realize-product-from-template` scaffolds new codebases from it with the repository's `bootstrapCommand`. Template mode changes only the status check, Phase 1a and Phase 6. Brief, areas, stories, validation and architecture are written exactly as for a product, because a template's definition describes what its starter repo already ships.
 
 ## Config
 
@@ -68,7 +73,9 @@ Before doing anything, check what already exists:
 
 1. Call `listProducts` from the DefProd MCP server.
 2. **Match against existing products**:
+   - **In template mode, match both names.** Treat the requested name and its `<Name> Template` form (see Phase 1a) as exact matches. A template created by an earlier run of this skill carries the suffixed name, so a run that compared only the bare name would never find it and would create a duplicate.
    - **Exact match** (case-insensitive name match): proceed with this product — extract its ID and continue to step 3.
+     **Check the kind first.** If the match's `isTemplate` disagrees with the mode (a template was asked for and the match is a product, or the reverse), stop and tell the user which one you found. Offer **(a)** continue with it as it is, or **(b)** create a new one of the requested kind. Never convert one into the other: this skill has no way to change `isTemplate`, and the app's "create template from product" and "create product from template" actions are the place for that.
    - **No exact match — check for similar products**: scan the full product list for names that resemble the requested name (e.g. substring match, word overlap, abbreviation match, or obvious typo). If one or more similar products exist, present them to the user:
 
      > **No exact product match for "<requested-name>", but these existing products look similar:**
@@ -81,7 +88,7 @@ Before doing anything, check what already exists:
      > **(a)** Continue with one of the above (specify the number)
      > **(b)** Create a new product called "<requested-name>"
 
-     Wait for the user's choice. If they pick an existing product, use that product's ID and continue to step 3. If they choose to create new, proceed to Phase 1.
+     Wait for the user's choice. If they pick an existing product, use that product's ID and continue to step 3. Apply the same kind check as for an exact match to the one they pick. If they choose to create new, proceed to Phase 1.
    - **No match and no similar products**: proceed to Phase 1 (product creation).
 3. If the product exists (from step 2):
    - Call `getBriefForProduct` — check if the brief is populated (has description, problem, users, requirements).
@@ -96,6 +103,8 @@ Before doing anything, check what already exists:
    ]
    ```
    Use the primary package path for this product from the onboarding document's product details. This handles the case where products were created before the Repo entity existed.
+
+   **In template mode, when this step has just linked the template to a repo, run step 1a-bis now**, before resuming at the phase below. This is the path a definition-only template takes to gain its starter repo, and the template's earlier phases are already done, so 1a-bis would otherwise never run.
 
 Based on what exists, skip to the earliest incomplete phase:
 
@@ -130,6 +139,32 @@ If a **Repo ID** was recorded from the onboarding document (not `none`), also pa
 The backend atomically links the created product to the repo's `products` array when `repoId` is provided — the skill does not need to call `patchRepo`.
 
 If no Repo ID is available (skill running outside the guide flow), call `createProduct` with just `name` and `teamId`. The product's `onboardingStatus` defaults to `idle`.
+
+**In template mode**, create it as a template:
+- also pass `isTemplate: true`;
+- name it `<Name> Template`, the convention the app uses when it makes a template from a product, unless the name already ends in "Template" (case-insensitive). Do not double the suffix.
+
+Everything else above holds unchanged. In particular, when a Repo ID is present, `repoId` and `repoPackagePath` link the template to the repository, and **that link is the template's starter repo**. No further binding step is needed.
+
+If no Repo ID is available, still create the template, then tell the user plainly that it is **definition-only**: realizing a product from it will copy the definition but scaffold no code. To give it a starter repo, run `/defprod-onboard-repo` from the repository's root first and re-invoke this skill, which links the existing template in the status check.
+
+#### 1a-bis. Starter-repo bootstrap command (template mode, Repo ID only)
+
+Skip this step outside template mode, and when no Repo ID is available.
+
+`/defprod-realize-product-from-template` scaffolds a new codebase by running the starter repo's `bootstrapCommand` locally. Without one, realizing the template copies the definition only. Set it up here:
+
+1. Call `getRepo` with the Repo ID. If `bootstrapCommand` is already set, **leave it as is**, mention it to the user, and continue to 1b.
+2. Otherwise, look in the repository for **its own** recipe for creating a new app from it: a README section on creating or scaffolding a new app, a generator or rename script (e.g. `scripts/generate-*`, `scripts/create-*`, `scripts/rename-*`), a `bin` entry or package script that does the same, or a `create-*` package.
+3. If you found one, propose a command that runs it, with the two placeholders the realize skill substitutes: `{{parentDir}}` (the directory the new app is created in) and `{{appName}}` (the new app's kebab-case name), for example `npx tsx scripts/generate-app.ts {{parentDir}} {{appName}}`. Show the user the command and the file you based it on, and ask them to **confirm**, **edit** or **skip** it.
+   If you found nothing, say so and ask whether they want to supply a command or skip. **Never invent a command the repository cannot run.**
+4. On confirm or edit, save it:
+   ```json
+   [{ "op": "add", "path": "/bootstrapCommand", "value": "<command>" }]
+   ```
+   via `patchRepo`. On skip, continue. The template still works, as a definition-only template.
+
+**Never run the command yourself.** It creates a new codebase and belongs to the realize flow. DefProd only stores it.
 
 #### 1b. Research the codebase
 
@@ -484,6 +519,10 @@ Suggest next steps:
 > - Run `/defprod-analyze-discrepancies <area>` periodically to catch drift
 > - Use `/defprod-implement-feature` when building new features — it ensures user story alignment
 
+**In template mode**, say that it is a template, name its starter repo and its bootstrap command (or say it has none and is definition-only), and add a next step:
+
+> - Run `/defprod-realize-product-from-template <template name>` to try it end to end: it creates a product from this template and, if a bootstrap command is set, scaffolds a new codebase from the starter repo
+
 ---
 
 ## Progress tracking (guide UI)
@@ -503,6 +542,7 @@ Add `discrepanciesFixed` only if Phase 4 fixes were applied; add `architectureDe
 ## Rules
 
 - **Always check status first** — never recreate what already exists. Read before writing.
+- **Template mode is opt-in and never converts** — create a template only when the invocation or the user asks for one. Never turn an existing product into a template or the reverse, and never run a starter repo's bootstrap command.
 - **Always get user confirmation** before creating areas or stories in bulk. Present proposals and wait for approval.
 - **Stories describe existing capabilities** — since this skill analyses an existing codebase, all stories should have `status: completed`. They describe what the product already does, not what it should do.
 - **Favour completeness over arbitrary targets** — cover every distinct capability the codebase exposes. Do not stop at any predetermined story count per area. Do not pad to hit one either.
